@@ -1319,7 +1319,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
 <!-- Overlay mobile sidebar -->
 <div id="sb-overlay" style="display:none;position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.5);" onclick="document.getElementById('sidebar').classList.remove('open');document.getElementById('sb-overlay').style.display='none';"></div>
  
-<script>
+<script type="module">
 // ═══════════════════════════════════════════════════════════
 // CONFIG — URL da API (troque pela URL do seu servidor)
 // ═══════════════════════════════════════════════════════════
@@ -1396,8 +1396,20 @@ function iniciarListenerAgendamentos() {
 }
 
 // ═══════════════════════════════════════════════════════════
-// AUTH — JWT
+// AUTH — Firebase Authentication
 // ═══════════════════════════════════════════════════════════
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBgb0UIx1opfHPaa23-uDocfYS89kDjmFI", // ← troque pela nova API Key do Firebase
+  authDomain: "ohbarbeiro-62ccc.firebaseapp.com",
+  projectId: "ohbarbeiro-62ccc",
+};
+
+const _fbApp  = initializeApp(firebaseConfig);
+const _fbAuth = getAuth(_fbApp);
+
 async function doLogin() {
   const emailEl = document.getElementById('lp-email');
   const senhaEl = document.getElementById('lp-senha');
@@ -1411,17 +1423,20 @@ async function doLogin() {
   err.textContent='Entrando…'; err.style.color='var(--info)'; err.style.display='block';
 
   try {
-    const r = await fetch(API_URL+'/api/login', {
-      method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password})
-    });
-    const data = await r.json();
-    if (!r.ok) { err.textContent=data.error||'Erro ao entrar.'; err.style.color='var(--err)'; return; }
-    _token = data.token;
+    const cred = await signInWithEmailAndPassword(_fbAuth, email, password);
+    _token = await cred.user.getIdToken();
     localStorage.setItem('adm_token', _token);
     err.style.display='none';
-    await abrirPainel(email);
+    await abrirPainel(cred.user.email);
   } catch(e) {
-    err.textContent='Erro de conexão com o servidor.'; err.style.color='var(--err)';
+    const msgs = {
+      'auth/invalid-credential': 'E-mail ou senha incorretos.',
+      'auth/user-not-found':     'Usuário não encontrado.',
+      'auth/wrong-password':     'Senha incorreta.',
+      'auth/too-many-requests':  'Muitas tentativas. Tente mais tarde.',
+    };
+    err.textContent = msgs[e.code] || 'Erro ao entrar. Tente novamente.';
+    err.style.color='var(--err)'; err.style.display='block';
   }
 }
 
@@ -1439,8 +1454,9 @@ async function abrirPainel(email) {
   iniciarListenerAgendamentos();
 }
 
-function doLogout() {
+async function doLogout() {
   clearInterval(_poll);
+  await signOut(_fbAuth);
   _token=null;
   localStorage.removeItem('adm_token');
   document.getElementById('login-screen').style.display='flex';
@@ -1449,14 +1465,13 @@ function doLogout() {
 }
 
 async function checkSession() {
-  if (!_token) return;
-  try {
-    const r = await fetch(API_URL+'/api/config/theme', {headers:apiHeaders()});
-    if (r.ok) {
-      const payload = JSON.parse(atob(_token.split('.')[1]));
-      await abrirPainel(payload.email||'');
-    } else { doLogout(); }
-  } catch(e) { doLogout(); }
+  onAuthStateChanged(_fbAuth, async (user) => {
+    if (user) {
+      _token = await user.getIdToken();
+      localStorage.setItem('adm_token', _token);
+      await abrirPainel(user.email);
+    }
+  });
 }
 
 window.doLogin  = doLogin;
