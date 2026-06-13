@@ -1454,10 +1454,15 @@ async function abrirPainel(email) {
   iniciarListenerAgendamentos();
 }
 
+let _tokenRefresh = null;
+let _painelAberto = false;
+
 async function doLogout() {
   clearInterval(_poll);
+  clearInterval(_tokenRefresh);
   await signOut(_fbAuth);
   _token=null;
+  _painelAberto=false;
   localStorage.removeItem('adm_token');
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('app').style.display='none';
@@ -1467,9 +1472,24 @@ async function doLogout() {
 async function checkSession() {
   onAuthStateChanged(_fbAuth, async (user) => {
     if (user) {
-      _token = await user.getIdToken();
+      _token = await user.getIdToken(true);
       localStorage.setItem('adm_token', _token);
-      await abrirPainel(user.email);
+
+      if (!_painelAberto) {
+        _painelAberto = true;
+        await abrirPainel(user.email);
+      }
+
+      clearInterval(_tokenRefresh);
+      _tokenRefresh = setInterval(async () => {
+        try {
+          _token = await user.getIdToken(true);
+          localStorage.setItem('adm_token', _token);
+        } catch(e) { doLogout(); }
+      }, 50 * 60 * 1000);
+
+    } else {
+      _painelAberto = false;
     }
   });
 }
