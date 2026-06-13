@@ -51,10 +51,19 @@ async function fbSet(k, v) {
   await setDoc(doc(_fdb, COL, k), { __v: v });
 }
 
-// BK — compatível com o código existente (síncrono via cache)
+const API_URL = 'https://ohbarbeirobeckend.onrender.com';
+
+// BK — leitura via cache local, escrita via Render (backend)
 window.BK = {
   get: (k, def) => { const v = _fcache[k]; return (v !== undefined && v !== null) ? v : (def ?? null); },
-  set: (k, v) => { _fcache[k] = v; setDoc(doc(_fdb, COL, k), { __v: v }).catch(()=>{}); },
+  set: (k, v) => {
+    _fcache[k] = v;
+    fetch(`${API_URL}/api/public/${k}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(v)
+    }).catch(() => {});
+  },
 };
 
 /* ── siteConfig: objeto central com todos os dados ── */
