@@ -2797,7 +2797,8 @@ let _planos=[];
 let _plBens=[];
 
 function loadPlanos(){
-  _planos=DB.get('planos',[]);
+  const _planosRaw=DB.get('planos',[]);
+  _planos=Array.isArray(_planosRaw)?_planosRaw:[];
   renderPlanos();
   renderPlanosAtivos();
   renderAssinantes();
@@ -2866,7 +2867,7 @@ async function savePlano(){
   const data={nome:el('pl-nome').value.trim(),preco:parseFloat(el('pl-preco').value)||0,desc:el('pl-desc').value.trim(),linkWhatsApp:el('pl-wa').value.trim(),cor:el('pl-cor').value,status:el('pl-st').value,beneficios:bens};
   if(!data.nome){toast('Informe o nome do plano.','er');return;}
   // Planos são salvos como array via /api/config/planos
-  let list=DB.get('planos',[]);
+  let list=DB.get('planos',[]);if(!Array.isArray(list))list=[];
   if(id){const i=list.findIndex(x=>x.id===id);if(i>-1)list[i]={...list[i],...data};}
   else list.push({id:uid(),...data});
   try {
