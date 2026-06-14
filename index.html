@@ -1573,6 +1573,43 @@ function renderClube() {
    Exibe endereço/mapa somente após preenchimento.
    Sem endereço: oculta o grid e exibe placeholder discreto.
 ═══════════════════════════════════════════════════════════ */
+/* Converte qualquer link do Google Maps (compartilhar, place, etc.)
+   em uma URL de EMBED válida (única que funciona em <iframe> em todos
+   os dispositivos). Se não conseguir converter, usa o endereço como
+   busca genérica. Retorna '' se não houver dados suficientes. */
+function gerarMapaEmbed(sc) {
+  const url = sc.locMaps || '';
+
+  // Já é um link de embed -> usa direto
+  if (/\/maps\/embed/.test(url)) return url;
+
+  // Tenta extrair coordenadas "lat,lng" do link (ex: @-7.123,-35.456 ou q=lat,lng)
+  const coordMatch = url.match(/(-?\d{1,3}\.\d+),(-?\d{1,3}\.\d+)/);
+  if (coordMatch) {
+    const [, lat, lng] = coordMatch;
+    return `https://www.google.com/maps?q=${lat},${lng}&z=16&output=embed`;
+  }
+
+  // Tenta extrair nome do local de um link "place"
+  const placeMatch = url.match(/\/maps\/place\/([^/@]+)/);
+  if (placeMatch) {
+    const nome = decodeURIComponent(placeMatch[1]).replace(/\+/g, ' ');
+    return `https://www.google.com/maps?q=${encodeURIComponent(nome)}&z=16&output=embed`;
+  }
+
+  // Sem link reconhecível: monta busca a partir do endereço cadastrado
+  const partesEndereco = [sc.locRua, sc.locBairro, sc.locCidade, sc.locEstado]
+    .filter(Boolean).join(', ');
+  if (partesEndereco) {
+    return `https://www.google.com/maps?q=${encodeURIComponent(partesEndereco)}&z=16&output=embed`;
+  }
+
+  // Último recurso: se o link existir mas não bateu em nada acima
+  if (url) return `https://www.google.com/maps?q=${encodeURIComponent(url)}&z=16&output=embed`;
+
+  return '';
+}
+
 function renderLocation() {
   const sc = window.siteConfig;
   const grid = qid('location-grid');
@@ -1604,11 +1641,13 @@ function renderLocation() {
 
   /* Mapa */
   let mapaHtml = '';
-  if (sc.locMaps) {
+  const mapaSrc = gerarMapaEmbed(sc);
+  if (mapaSrc) {
     mapaHtml = `
       <div class="map-embed" style="padding:0">
-        <iframe src="${sc.locMaps}" width="100%" height="100%"
-          style="border:0;border-radius:var(--radius)" allowfullscreen loading="lazy"></iframe>
+        <iframe src="${mapaSrc}" width="100%" height="100%"
+          style="border:0;border-radius:var(--radius)" allowfullscreen loading="lazy"
+          referrerpolicy="no-referrer-when-downgrade"></iframe>
       </div>`;
   }
 
