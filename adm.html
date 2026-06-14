@@ -1392,11 +1392,18 @@ async function apiGetConfig(chave)       { return _apiFetch(API_URL+'/api/config
 const CHAVES_CONFIG = ['config','hero','localizacao','horarios','galeria','planos','metas','clube','rodape','theme','receitas_mes_ant'];
 const CHAVES_LISTA  = ['agendamentos','clientes','servicos','produtos','barbeiros','receitas','despesas','assinaturas'];
 
+// Carrega em lotes para não disparar todas as requisições ao mesmo tempo e causar 429
+async function loadEmLotes(itens, fn, tamLote = 3, delayMs = 300) {
+  for (let i = 0; i < itens.length; i += tamLote) {
+    const lote = itens.slice(i, i + tamLote);
+    await Promise.all(lote.map(fn));
+    if (i + tamLote < itens.length) await new Promise(r => setTimeout(r, delayMs));
+  }
+}
+
 async function loadAllCache() {
-  await Promise.all([
-    ...CHAVES_LISTA.map(async k  => { try { _cache[k] = await apiGet(k) || []; }            catch(e){ _cache[k]=[]; } }),
-    ...CHAVES_CONFIG.map(async k => { try { _cache[k] = await apiGetConfig(k) || {}; }       catch(e){ _cache[k]={}; } }),
-  ]);
+  await loadEmLotes(CHAVES_LISTA,  async k => { try { _cache[k] = await apiGet(k) || []; }       catch(e){ _cache[k]=[]; } });
+  await loadEmLotes(CHAVES_CONFIG, async k => { try { _cache[k] = await apiGetConfig(k) || {}; } catch(e){ _cache[k]={}; } });
 }
 
 // ── DB: leitura do cache, escrita direto na API ──────────────
@@ -1423,7 +1430,7 @@ const DB = {
 // simulamos "tempo real" com polling: a cada poucos segundos, busca tudo
 // de novo e, se algo mudou, atualiza o cache e re-renderiza a tela ativa.
 let _poll = null;
-const SYNC_INTERVAL_MS = 6000;
+const SYNC_INTERVAL_MS = 15000; // aumentado para reduzir pressão no backend (era 6000)
 
 function getPainelAtivo(){
   const ativo = document.querySelector('.panel.active');
@@ -1453,10 +1460,15 @@ async function iniciarSyncGlobal() {
   _poll = setInterval(async () => {
     if(temModalAberto()) return; // não atualiza por baixo do usuário enquanto ele edita algo
     try {
-      const [listas, configs] = await Promise.all([
-        Promise.all(CHAVES_LISTA.map(async k => { try { return [k, await apiGet(k) || []]; } catch(e){ return [k, _cache[k]]; } })),
-        Promise.all(CHAVES_CONFIG.map(async k => { try { return [k, await apiGetConfig(k) || {}]; } catch(e){ return [k, _cache[k]]; } })),
-      ]);
+      // Carrega em lotes para não causar 429 no backend
+      const listas = [];
+      await loadEmLotes(CHAVES_LISTA, async k => {
+        try { listas.push([k, await apiGet(k) || []]); } catch(e){ listas.push([k, _cache[k]]); }
+      });
+      const configs = [];
+      await loadEmLotes(CHAVES_CONFIG, async k => {
+        try { configs.push([k, await apiGetConfig(k) || {}]); } catch(e){ configs.push([k, _cache[k]]); }
+      });
       let mudou = false;
       for(const [k,v] of [...listas, ...configs]){
         if(JSON.stringify(_cache[k]) !== JSON.stringify(v)){ _cache[k]=v; mudou=true; }
@@ -3070,6 +3082,7 @@ async function cobrarAssinante(id){
 
 // ─── Expõe funções para o HTML inline ───────────────────────
 window.toggleTheme=toggleTheme; window.toggleSidebar=toggleSidebar; window.goTo=goTo;
+window.openSidebarMobile=openSidebarMobile; window.closeSidebarMobile=closeSidebarMobile;
 window.openMo=openMo; window.closeMo=closeMo; window.openAg=openAg; window.editAg=editAg;
 window.saveAg=saveAg; window.finalizarAg=finalizarAg; window.delAg=delAg;
 window.clearAgF=clearAgF; window.renderAg=renderAg;
