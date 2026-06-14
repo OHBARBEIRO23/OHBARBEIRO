@@ -1380,19 +1380,58 @@ const DB = {
   del(k) { delete _cache[k]; }
 };
 
-// ── Polling de agendamentos (substitui onSnapshot) ───────────
+// ── Sync global em tempo real (polling) ──────────────────────
+// Como o front não tem acesso direto ao Firestore (segurança via backend),
+// simulamos "tempo real" com polling: a cada poucos segundos, busca tudo
+// de novo e, se algo mudou, atualiza o cache e re-renderiza a tela ativa.
 let _poll = null;
-function iniciarListenerAgendamentos() {
+const SYNC_INTERVAL_MS = 6000;
+
+function getPainelAtivo(){
+  const ativo = document.querySelector('.panel.active');
+  return ativo ? ativo.id.replace('panel-','') : null;
+}
+
+function temModalAberto(){
+  return !!document.querySelector('.mo.open');
+}
+
+function rerenderPainel(p){
+  if(p==='dashboard') loadDashboard();
+  else if(p==='agenda'){ renderAg(); populateAgSelects(); }
+  else if(p==='financeiro'){ renderRec(); renderDesp(); updateFinKPIs(); }
+  else if(p==='clientes'){ _clis=DB.get('clientes',[]); renderCli(); buildCliRanking(); buildCliInativos(); }
+  else if(p==='servicos'){ _svcs=DB.get('servicos',[]); renderSvc(); buildSvcRanking(); buildSvcChart2(); }
+  else if(p==='produtos'){ _prods=DB.get('produtos',[]); renderProd(); buildProdRanking(); buildProdEstoqueAlerts(); }
+  else if(p==='barbeiros'){ loadBarb(); }
+  else if(p==='planos'){ renderPlanos(); renderPlanosAtivos(); }
+  else if(p==='metas'){ renderMetasProgress(); }
+  else if(p==='conteudo'){ /* conteúdo é editado manualmente, evita sobrescrever enquanto digita */ }
+  else if(p==='alertas'){ buildAlerts(); }
+}
+
+async function iniciarSyncGlobal() {
+  if(_poll) clearInterval(_poll);
   _poll = setInterval(async () => {
+    if(temModalAberto()) return; // não atualiza por baixo do usuário enquanto ele edita algo
     try {
-      const novos = await apiGet('agendamentos');
-      if (novos) {
-        _cache['agendamentos'] = novos;
+      const [listas, configs] = await Promise.all([
+        Promise.all(CHAVES_LISTA.map(async k => { try { return [k, await apiGet(k) || []]; } catch(e){ return [k, _cache[k]]; } })),
+        Promise.all(CHAVES_CONFIG.map(async k => { try { return [k, await apiGetConfig(k) || {}]; } catch(e){ return [k, _cache[k]]; } })),
+      ]);
+      let mudou = false;
+      for(const [k,v] of [...listas, ...configs]){
+        if(JSON.stringify(_cache[k]) !== JSON.stringify(v)){ _cache[k]=v; mudou=true; }
+      }
+      if(mudou){
+        const painel = getPainelAtivo();
+        updateNotifBadge();
+        if(painel) rerenderPainel(painel);
+        if(painel!=='dashboard') loadDashboard(); // mantém badges/KPIs globais atualizados
         if (typeof processarAgendamentosSite === 'function') processarAgendamentosSite();
-        if (typeof renderAg === 'function') renderAg();
       }
     } catch(e){}
-  }, 15000);
+  }, SYNC_INTERVAL_MS);
 }
 
 // ═══════════════════════════════════════════════════════════
@@ -1451,7 +1490,7 @@ async function abrirPainel(email) {
   if(sbAv)    sbAv.textContent=(email||'A')[0].toUpperCase();
   await loadAllCache();
   initApp();
-  iniciarListenerAgendamentos();
+  iniciarSyncGlobal();
 }
 
 let _tokenRefresh = null;
@@ -1951,6 +1990,8 @@ async function saveAg(){
   const svcs=[...el('ag-svcs').selectedOptions].map(o=>o.value);
   const cliId=el('ag-cli').value;
   const cliObj=DB.get('clientes',[]).find(c=>c.id===cliId);
+  const agAnterior = id ? DB.get('agendamentos',[]).find(x=>x.id===id) : null;
+  const eraFinalizado = agAnterior?.status==='finalizado';
   const data={clienteId:cliId,clienteNome:cliObj?.nome||'',barbeiroId:el('ag-barb').value,servicos:svcs,data:el('ag-data').value,hora:el('ag-hora').value,status:el('ag-stat').value,total:parseFloat(el('ag-total').value)||0,obs:el('ag-obs').value};
   try {
     let salvo;
@@ -1964,7 +2005,25 @@ async function saveAg(){
     _cache['agendamentos']=list;
     // Atualiza histórico do cliente se finalizado
     if(data.status==='finalizado') atualizarHistoricoCliente(cliId, salvo||{...data,id});
-    toast('Agendamento salvo!'); closeMo('mo-ag'); renderAg();
+    // Lança o valor como receita ao finalizar pela primeira vez (evita duplicar)
+    if(data.status==='finalizado' && !eraFinalizado && parseFloat(data.total||0)>0){
+      const svcsCad=DB.get('servicos',[]);
+      const nomesSvc=svcs.map(sid=>svcsCad.find(s=>s.id===sid)?.nome).filter(Boolean).join(', ');
+      const recData={
+        descricao:`Agendamento — ${data.clienteNome||'Cliente'}${nomesSvc?' ('+nomesSvc+')':''}`,
+        categoria:'servico',
+        valor:parseFloat(data.total||0),
+        data:data.data||today(),
+        clienteId:data.clienteId||'',
+        obs:'Gerado automaticamente ao finalizar agendamento',
+        agendamentoId:salvo?.id||id
+      };
+      try {
+        const novaRec = await apiPost('receitas', recData);
+        if(novaRec) _cache['receitas']=[...(DB.get('receitas',[])), novaRec];
+      } catch(e){ console.error('Erro ao lançar receita do agendamento:', e); }
+    }
+    toast('Agendamento salvo!'); closeMo('mo-ag'); renderAg(); updateFinKPIs(); loadDashboard();
   } catch(e){ toast('Erro ao salvar: '+e.message,'er'); }
 }
 async function finalizarAg(id){
@@ -1976,7 +2035,25 @@ async function finalizarAg(id){
     let list=DB.get('agendamentos',[]); const i=list.findIndex(x=>x.id===id); if(i>-1)list[i]=atualizado;
     _cache['agendamentos']=list;
     if(!jaFinalizado && ag.clienteId) atualizarHistoricoCliente(ag.clienteId, atualizado);
-    toast('Finalizado!'); renderAg();
+    // Lança o valor do agendamento como receita no financeiro (evita duplicar se já finalizado)
+    if(!jaFinalizado && parseFloat(atualizado.total||ag.total||0)>0){
+      const svcs=DB.get('servicos',[]);
+      const nomesSvc=(atualizado.servicos||ag.servicos||[]).map(sid=>svcs.find(s=>s.id===sid)?.nome).filter(Boolean).join(', ');
+      const recData={
+        descricao:`Agendamento — ${atualizado.clienteNome||ag.clienteNome||'Cliente'}${nomesSvc?' ('+nomesSvc+')':''}`,
+        categoria:'servico',
+        valor:parseFloat(atualizado.total||ag.total||0),
+        data:atualizado.data||ag.data||today(),
+        clienteId:atualizado.clienteId||ag.clienteId||'',
+        obs:'Gerado automaticamente ao finalizar agendamento',
+        agendamentoId:id
+      };
+      try {
+        const novaRec = await apiPost('receitas', recData);
+        if(novaRec) _cache['receitas']=[...(DB.get('receitas',[])), novaRec];
+      } catch(e){ console.error('Erro ao lançar receita do agendamento:', e); }
+    }
+    toast('Finalizado!'); renderAg(); updateFinKPIs(); loadDashboard();
   } catch(e){ toast('Erro: '+e.message,'er'); }
 }
 async function delAg(id){
