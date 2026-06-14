@@ -1610,12 +1610,47 @@ function initApp(){
 
 // ── Menu 3 pontos ──────────────────────────────────────────
 function dotMenu(id, items) {
-  // fecha outros abertos
-  document.querySelectorAll('.dot-menu-drop.open').forEach(d => {
-    if (d.id !== 'dm-' + id) d.classList.remove('open');
-  });
   const drop = document.getElementById('dm-' + id);
-  if (drop) drop.classList.toggle('open');
+  if (!drop) return;
+
+  const willOpen = !drop.classList.contains('open');
+
+  // fecha outros abertos (e devolve cada um pro seu wrap original)
+  document.querySelectorAll('.dot-menu-drop.open').forEach(d => {
+    d.classList.remove('open');
+    d.style.position = '';
+    d.style.top = '';
+    d.style.left = '';
+    d.style.right = '';
+    if (d._originalParent) {
+      d._originalParent.appendChild(d);
+      d._originalParent = null;
+    }
+  });
+
+  if (willOpen) {
+    // guarda o pai original na primeira vez
+    if (!drop._originalParent) drop._originalParent = drop.parentNode;
+
+    // move pro <body> pra escapar de containers com overflow:hidden/auto
+    document.body.appendChild(drop);
+
+    const btn = event && event.currentTarget ? event.currentTarget : drop._originalParent.querySelector('.dot-menu-btn');
+    const r = btn.getBoundingClientRect();
+    const dropWidth = 150; // min-width do .dot-menu-drop
+
+    drop.style.position = 'fixed';
+    drop.style.top = (r.bottom + 4) + 'px';
+
+    // se não couber à direita, alinha pela direita do botão
+    let left = r.right - dropWidth;
+    if (left < 8) left = 8;
+    if (left + dropWidth > window.innerWidth - 8) left = window.innerWidth - dropWidth - 8;
+    drop.style.left = left + 'px';
+    drop.style.right = 'auto';
+
+    drop.classList.add('open');
+  }
 }
 window.dotMenu = dotMenu;
  
@@ -2010,7 +2045,7 @@ function renderAg(){
       <td>${badgeSt(a.status)}</td>
       <td style="color:var(--gold);font-weight:600">${brl(a.total)}</td>
       <td><div class="dot-menu-wrap">
-        <button class="dot-menu-btn" onclick="dotMenu('${a.id}')">⋮</button>
+        <button class="dot-menu-btn" onclick="dotMenu(event,'${a.id}')">⋮</button>
         <div class="dot-menu-drop" id="dm-${a.id}">
           <button class="dot-menu-item" onclick="editAg('${a.id}');dotMenu('${a.id}')">✏️ Editar</button>
           <button class="dot-menu-item success" onclick="finalizarAg('${a.id}');dotMenu('${a.id}')">✓ Finalizar</button>
@@ -2150,12 +2185,12 @@ function renderRec(){
   const mes=(el('f-rec-mes')?.value)||todayMes();
   const recs=DB.get('receitas',[]).filter(r=>r.data?.startsWith(mes)).sort((a,b)=>b.data.localeCompare(a.data));
   const catLabels={servico:'Serviço',produto:'Produto',avulso:'Avulso',assinatura:'Assinatura',outro:'Outro'};
-  el('tb-rec').innerHTML=recs.length?recs.map(r=>`<tr><td>${fDate(r.data)}</td><td>${r.descricao||'—'}</td><td><span class="badge b-conf">${catLabels[r.categoria]||r.categoria}</span></td><td style="color:var(--ok);font-weight:600">${brl(r.valor)}</td><td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu('rec${r.id}')">⋮</button><div class="dot-menu-drop" id="dm-rec${r.id}"><button class="dot-menu-item danger" onclick="delRec('${r.id}');dotMenu('rec${r.id}')">🗑 Excluir</button></div></div></td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text3)">Nenhuma receita.</td></tr>';
+  el('tb-rec').innerHTML=recs.length?recs.map(r=>`<tr><td>${fDate(r.data)}</td><td>${r.descricao||'—'}</td><td><span class="badge b-conf">${catLabels[r.categoria]||r.categoria}</span></td><td style="color:var(--ok);font-weight:600">${brl(r.valor)}</td><td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu(event,'rec${r.id}')">⋮</button><div class="dot-menu-drop" id="dm-rec${r.id}"><button class="dot-menu-item danger" onclick="delRec('${r.id}');dotMenu('rec${r.id}')">🗑 Excluir</button></div></div></td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text3)">Nenhuma receita.</td></tr>';
 }
 function renderDesp(){
   const mes=(el('f-desp-mes')?.value)||todayMes();
   const desps=DB.get('despesas',[]).filter(d=>d.data?.startsWith(mes)).sort((a,b)=>b.data.localeCompare(a.data));
-  el('tb-desp').innerHTML=desps.length?desps.map(d=>`<tr><td>${fDate(d.data)}</td><td>${d.nome||'—'}</td><td style="font-size:.75rem">${d.categoria||'—'}</td><td><span class="badge ${d.tipo==='fixa'?'b-prog':'b-pend'}">${d.tipo==='fixa'?'Fixa':'Variável'}</span></td><td style="color:var(--err);font-weight:600">${brl(d.valor)}</td><td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu('desp${d.id}')">⋮</button><div class="dot-menu-drop" id="dm-desp${d.id}"><button class="dot-menu-item danger" onclick="delDesp('${d.id}');dotMenu('desp${d.id}')">🗑 Excluir</button></div></div></td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text3)">Nenhuma despesa.</td></tr>';
+  el('tb-desp').innerHTML=desps.length?desps.map(d=>`<tr><td>${fDate(d.data)}</td><td>${d.nome||'—'}</td><td style="font-size:.75rem">${d.categoria||'—'}</td><td><span class="badge ${d.tipo==='fixa'?'b-prog':'b-pend'}">${d.tipo==='fixa'?'Fixa':'Variável'}</span></td><td style="color:var(--err);font-weight:600">${brl(d.valor)}</td><td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu(event,'desp${d.id}')">⋮</button><div class="dot-menu-drop" id="dm-desp${d.id}"><button class="dot-menu-item danger" onclick="delDesp('${d.id}');dotMenu('desp${d.id}')">🗑 Excluir</button></div></div></td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text3)">Nenhuma despesa.</td></tr>';
 }
 function openRec(){el('rec-id').value='';['rec-desc','rec-val','rec-obs'].forEach(f=>el(f).value='');el('rec-data').value=today();el('rec-cat').value='servico';const clis=DB.get('clientes',[]);el('rec-cli').innerHTML='<option value="">— Nenhum —</option>'+clis.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');openMo('mo-rec');}
 async function saveRec(){
@@ -2242,7 +2277,7 @@ function renderCli(){
   el('tb-cli').innerHTML=list.length?list.map(c=>{
     const diff=c.ultimaVisita?(Date.now()-new Date(c.ultimaVisita))/86400000:999;
     const st=diff<=30?'<span class="badge b-on">Ativo</span>':diff<=60?'<span class="badge b-pend">30d+</span>':diff<=90?'<span class="badge b-off">60d+</span>':'<span class="badge b-canc">90d+</span>';
-    return `<tr><td><b>${c.nome||'—'}</b></td><td>${c.telefone||'—'}</td><td style="font-weight:600">${c.visitas||0}</td><td>${fDate(c.ultimaVisita)||'Nunca'}</td><td style="color:var(--gold)">${brl(c.totalGasto)}</td><td>${st}</td><td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu('cli${c.id}')">⋮</button><div class="dot-menu-drop" id="dm-cli${c.id}"><button class="dot-menu-item" onclick="editCli('${c.id}');dotMenu('cli${c.id}')">✏️ Editar</button><button class="dot-menu-item danger" onclick="delCli('${c.id}');dotMenu('cli${c.id}')">🗑 Excluir</button></div></div></td></tr>`;
+    return `<tr><td><b>${c.nome||'—'}</b></td><td>${c.telefone||'—'}</td><td style="font-weight:600">${c.visitas||0}</td><td>${fDate(c.ultimaVisita)||'Nunca'}</td><td style="color:var(--gold)">${brl(c.totalGasto)}</td><td>${st}</td><td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu(event,'cli${c.id}')">⋮</button><div class="dot-menu-drop" id="dm-cli${c.id}"><button class="dot-menu-item" onclick="editCli('${c.id}');dotMenu('cli${c.id}')">✏️ Editar</button><button class="dot-menu-item danger" onclick="delCli('${c.id}');dotMenu('cli${c.id}')">🗑 Excluir</button></div></div></td></tr>`;
   }).join(''):'<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)">Nenhum cliente encontrado.</td></tr>';
 }
 function buildCliRanking(){
@@ -2313,7 +2348,7 @@ function renderSvc(){
     <td>${s.duracao||30}min</td>
     <td style="font-weight:600">${count[s.id]||0}</td>
     <td><span class="badge ${s.status==='ativo'?'b-on':'b-off'}">${s.status==='ativo'?'Ativo':'Inativo'}</span></td>
-    <td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu('svc${s.id}')">⋮</button><div class="dot-menu-drop" id="dm-svc${s.id}"><button class="dot-menu-item" onclick="editSvc('${s.id}');dotMenu('svc${s.id}')">✏️ Editar</button><button class="dot-menu-item danger" onclick="delSvc('${s.id}');dotMenu('svc${s.id}')">🗑 Excluir</button></div></div></td>
+    <td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu(event,'svc${s.id}')">⋮</button><div class="dot-menu-drop" id="dm-svc${s.id}"><button class="dot-menu-item" onclick="editSvc('${s.id}');dotMenu('svc${s.id}')">✏️ Editar</button><button class="dot-menu-item danger" onclick="delSvc('${s.id}');dotMenu('svc${s.id}')">🗑 Excluir</button></div></div></td>
   </tr>`).join(''):'<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)">Nenhum serviço cadastrado.</td></tr>';
 }
 function buildSvcRanking(){
@@ -2374,7 +2409,7 @@ function renderProd(){
       <td><span style="color:${low?'var(--err)':'var(--ok)'};font-weight:600">${p.estoque||0}</span></td>
       <td>${p.vendas||0}</td>
       <td><span class="badge ${p.status==='ativo'?'b-on':'b-off'}">${p.status==='ativo'?'Ativo':'Inativo'}</span></td>
-      <td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu('pr${p.id}')">⋮</button><div class="dot-menu-drop" id="dm-pr${p.id}"><button class="dot-menu-item" onclick="editProd('${p.id}');dotMenu('pr${p.id}')">✏️ Editar</button><button class="dot-menu-item success" onclick="venderProd('${p.id}');dotMenu('pr${p.id}')">🛒 Registrar Venda</button><button class="dot-menu-item danger" onclick="delProd('${p.id}');dotMenu('pr${p.id}')">🗑 Excluir</button></div></div></td>
+      <td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu(event,'pr${p.id}')">⋮</button><div class="dot-menu-drop" id="dm-pr${p.id}"><button class="dot-menu-item" onclick="editProd('${p.id}');dotMenu('pr${p.id}')">✏️ Editar</button><button class="dot-menu-item success" onclick="venderProd('${p.id}');dotMenu('pr${p.id}')">🛒 Registrar Venda</button><button class="dot-menu-item danger" onclick="delProd('${p.id}');dotMenu('pr${p.id}')">🗑 Excluir</button></div></div></td>
     </tr>`;
   }).join(''):'<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)">Nenhum produto cadastrado.</td></tr>';
 }
@@ -2446,7 +2481,7 @@ function loadBarb(){
       <td style="font-weight:600">${bAgs.length}</td>
       <td style="color:var(--gold);font-weight:600">${brl(fat)}</td>
       <td><span class="badge ${b.status==='ativo'?'b-on':'b-off'}">${b.status==='ativo'?'Ativo':'Inativo'}</span></td>
-      <td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu('br${b.id}')">⋮</button><div class="dot-menu-drop" id="dm-br${b.id}"><button class="dot-menu-item" onclick="editBarb('${b.id}');dotMenu('br${b.id}')">✏️ Editar</button><button class="dot-menu-item danger" onclick="delBarb('${b.id}');dotMenu('br${b.id}')">🗑 Excluir</button></div></div></td>
+      <td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu(event,'br${b.id}')">⋮</button><div class="dot-menu-drop" id="dm-br${b.id}"><button class="dot-menu-item" onclick="editBarb('${b.id}');dotMenu('br${b.id}')">✏️ Editar</button><button class="dot-menu-item danger" onclick="delBarb('${b.id}');dotMenu('br${b.id}')">🗑 Excluir</button></div></div></td>
     </tr>`;
   }).join(''):'<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text3)">Nenhum barbeiro cadastrado.</td></tr>';
 }
@@ -2813,7 +2848,7 @@ function renderPlanos(){
     <td style="font-size:.75rem;color:var(--text3)">${(p.beneficios||[]).slice(0,3).join(' · ')+(p.beneficios?.length>3?' …':'')}</td>
     <td><span style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${p.cor||'#D4AF37'};border:1px solid rgba(255,255,255,.2)"></span></td>
     <td><span class="badge ${p.status==='ativo'?'b-on':'b-off'}">${p.status==='ativo'?'Ativo':'Inativo'}</span></td>
-    <td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu('pl${p.id}')">⋮</button><div class="dot-menu-drop" id="dm-pl${p.id}"><button class="dot-menu-item" onclick="editPlano('${p.id}');dotMenu('pl${p.id}')">✏️ Editar</button><button class="dot-menu-item danger" onclick="delPlano('${p.id}');dotMenu('pl${p.id}')">🗑 Excluir</button></div></div></td>
+    <td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu(event,'pl${p.id}')">⋮</button><div class="dot-menu-drop" id="dm-pl${p.id}"><button class="dot-menu-item" onclick="editPlano('${p.id}');dotMenu('pl${p.id}')">✏️ Editar</button><button class="dot-menu-item danger" onclick="delPlano('${p.id}');dotMenu('pl${p.id}')">🗑 Excluir</button></div></div></td>
   </tr>`).join(''):'<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text3)">Nenhum plano cadastrado. Clique em "+ Novo Plano" para começar.</td></tr>';
 }
 
@@ -2931,7 +2966,7 @@ function renderAssinantes(){
     <td style="font-size:.78rem;color:var(--text3)">${a.formaPagamento||'—'}</td>
     <td>${fDate(a.proximaCobranca)}</td>
     <td>${statusBadge}</td>
-    <td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu('as${a.id}')">⋮</button><div class="dot-menu-drop" id="dm-as${a.id}">
+    <td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu(event,'as${a.id}')">⋮</button><div class="dot-menu-drop" id="dm-as${a.id}">
       <button class="dot-menu-item success" onclick="cobrarAssinante('${a.id}');dotMenu('as${a.id}')">💰 Cobrar</button>
       <button class="dot-menu-item" onclick="editAssinante('${a.id}');dotMenu('as${a.id}')">✏️ Editar</button>
       <button class="dot-menu-item danger" onclick="delAssinante('${a.id}');dotMenu('as${a.id}')">🗑 Excluir</button>
