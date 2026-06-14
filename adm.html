@@ -1354,9 +1354,6 @@ tr:hover td{background:rgba(255,255,255,.02);}
 </div>
 
 
-<!-- Overlay mobile sidebar -->
-<div id="sb-overlay" style="display:none;position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.5);" onclick="document.getElementById('sidebar').classList.remove('open');document.getElementById('sb-overlay').style.display='none';"></div>
- 
 <script type="module">
 // ═══════════════════════════════════════════════════════════
 // CONFIG — URL da API (troque pela URL do seu servidor)
@@ -2734,10 +2731,7 @@ function applyCfg(){
 // ═══════════════════════════════════════════════════════════
 // MOBILE SIDEBAR
 // ═══════════════════════════════════════════════════════════
-document.querySelector('.btn-mob')?.addEventListener('click',()=>{
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('sb-overlay').style.display=document.getElementById('sidebar').classList.contains('open')?'block':'none';
-});
+// (handled by openSidebarMobile/closeSidebarMobile via onclick + #sidebar-overlay)
  
 // ═══════════════════════════════════════════════════════════
 // BOOT
