@@ -1530,8 +1530,10 @@ async function doLogin() {
 }
 
 async function abrirPainel(email) {
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('app').style.display='flex';
+  const loginScreen = document.getElementById('login-screen');
+  const appEl = document.getElementById('app');
+  if (loginScreen) loginScreen.style.display='none';
+  if (appEl) appEl.style.display='flex';
   const sbName=document.getElementById('sb-name');
   const sbEmail=document.getElementById('sb-email');
   const sbAv=document.getElementById('sb-av');
@@ -1553,8 +1555,10 @@ async function doLogout() {
   _token=null;
   _painelAberto=false;
   localStorage.removeItem('adm_token');
-  document.getElementById('login-screen').style.display='flex';
-  document.getElementById('app').style.display='none';
+  const loginScreen = document.getElementById('login-screen');
+  const appEl = document.getElementById('app');
+  if (loginScreen) loginScreen.style.display='flex';
+  if (appEl) appEl.style.display='none';
   const lp=document.getElementById('lp-senha'); if(lp) lp.value='';
 }
 
@@ -3142,7 +3146,11 @@ window.delAssinante=delAssinante; window.cobrarAssinante=cobrarAssinante;
 window.onAsPlanoChange=onAsPlanoChange; window.onAsInicioChange=onAsInicioChange;
 
 // ── BOOT ─────────────────────────────────────────────────────
-checkSession();
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', checkSession);
+} else {
+  checkSession();
+}
 </script>
 </body>
 </html>
