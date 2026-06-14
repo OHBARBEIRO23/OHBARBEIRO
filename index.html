@@ -1141,6 +1141,7 @@ body::after {
     <div class="form-group">
       <label>Telefone / WhatsApp *</label>
       <input type="tel" id="client-phone" placeholder="(00) 9 0000-0000" maxlength="16">
+      <div id="plano-status" style="display:none;margin-top:8px;font-size:.8rem;padding:8px 12px;border-radius:8px;"></div>
     </div>
     <div class="form-group">
       <label>Observações (opcional)</label>
@@ -1158,9 +1159,9 @@ body::after {
     <p class="wz-panel-sub">Revise os detalhes antes de finalizar</p>
     <div class="summary-card">
       <div class="sum-head">Resumo do Agendamento</div>
-      <div class="sum-row">
+      <div class="sum-row" style="align-items:flex-start;flex-direction:column;gap:6px;">
         <span class="sr-label">Serviços</span>
-        <span class="sr-val" id="sum-services">—</span>
+        <div class="sr-val" id="sum-services" style="width:100%;display:flex;flex-direction:column;gap:4px;">—</div>
       </div>
       <div class="sum-row">
         <span class="sr-label">Barbeiro</span>
@@ -1351,6 +1352,7 @@ let state = {
   calMonth: new Date().getMonth(),
   carouselIdx: 0,
   bookedSlots: [],
+  planoAtivo: null, // null = não verificado, false = sem plano, objeto = assinatura ativa
 };
 
 /* ═══════════════════════════════════════════════════════════
@@ -1367,6 +1369,73 @@ function showToast(msg, isErr = false) {
 }
 function qs(sel) { return document.querySelector(sel); }
 function qid(id) { return document.getElementById(id); }
+
+/* ═══════════════════════════════════════════════════════════
+   PLANO / ASSINATURA — detecção por telefone
+   Corte e Barba são inclusos em qualquer plano ativo.
+═══════════════════════════════════════════════════════════ */
+
+/* Identifica se um serviço é "Corte" ou "Barba" pelo nome */
+function isServicoCoberto(servico) {
+  if (!servico || !servico.name) return false;
+  const n = servico.name.toLowerCase();
+  return n.includes('corte') || n.includes('barba');
+}
+
+/* Verifica se há assinatura ativa para o telefone informado */
+function buscarPlanoAtivoPorTelefone(telefone) {
+  const telNorm = (telefone || '').replace(/\D/g, '');
+  if (!telNorm || telNorm.length < 8) return null;
+
+  const clientes    = BK.get('clientes')    || [];
+  const assinaturas = BK.get('assinaturas') || [];
+
+  const cliente = clientes.find(c => (c.telefone || '').replace(/\D/g, '') === telNorm);
+  if (!cliente) return null;
+
+  const assinatura = assinaturas.find(a =>
+    a.clienteId === cliente.id && a.status === 'ativo'
+  );
+  return assinatura || null;
+}
+
+/* Chamado a cada tecla digitada no campo telefone (step 4) */
+function onPhoneInput(valor) {
+  const telNorm = (valor || '').replace(/\D/g, '');
+  const statusEl = qid('plano-status');
+
+  if (telNorm.length < 10) {
+    state.planoAtivo = null;
+    statusEl.style.display = 'none';
+    updateTotal();
+    return;
+  }
+
+  const assinatura = buscarPlanoAtivoPorTelefone(valor);
+  state.planoAtivo = assinatura || false;
+
+  if (assinatura) {
+    statusEl.style.display = 'block';
+    statusEl.style.background = 'rgba(212,175,55,.12)';
+    statusEl.style.border = '1px solid var(--gold)';
+    statusEl.style.color = 'var(--gold)';
+    statusEl.textContent = `✓ Plano ${assinatura.planoNome || 'ativo'} identificado! Corte e Barba inclusos.`;
+  } else {
+    statusEl.style.display = 'none';
+  }
+  updateTotal();
+}
+
+/* Calcula o total considerando desconto de plano ativo */
+function calcularTotal() {
+  const temPlano = !!state.planoAtivo;
+  return state.selectedServices.reduce((sum, id) => {
+    const s = SERVICES.find(x => x.id === id);
+    if (!s) return sum;
+    if (temPlano && isServicoCoberto(s)) return sum; // incluso no plano
+    return sum + s.price;
+  }, 0);
+}
 
 /* ═══════════════════════════════════════════════════════════
    APLICAÇÃO DO siteConfig NO DOM
@@ -1809,10 +1878,7 @@ function toggleService(id) {
 }
 
 function updateTotal() {
-  const total = state.selectedServices.reduce((sum, id) => {
-    const s = SERVICES.find(x => x.id === id);
-    return sum + (s ? s.price : 0);
-  }, 0);
+  const total = calcularTotal();
   const bar = qid('total-bar');
   bar.style.display = state.selectedServices.length ? 'flex' : 'none';
   qid('total-display').textContent = fmtBRLNum(total);
@@ -1941,17 +2007,26 @@ function selectTime(t) {
    STEP 5: RESUMO
 ═══════════════════════════════════════════════════════════ */
 function buildSummary() {
-  const svcNames = state.selectedServices.map(id => SERVICES.find(x => x.id === id)?.name).join(', ');
-  const barber   = BARBERS.find(b => b.id === state.selectedBarber);
-  const total    = state.selectedServices.reduce((s, id) => s + (SERVICES.find(x => x.id === id)?.price || 0), 0);
+  const barber  = BARBERS.find(b => b.id === state.selectedBarber);
+  const temPlano = !!state.planoAtivo;
 
-  qid('sum-services').textContent = svcNames;
+  const itensHtml = state.selectedServices.map(id => {
+    const s = SERVICES.find(x => x.id === id);
+    if (!s) return '';
+    const coberto = temPlano && isServicoCoberto(s);
+    return `<div style="display:flex;justify-content:space-between;width:100%;font-size:.85rem;">
+      <span>${s.name}</span>
+      <span style="${coberto ? 'color:var(--gold);font-weight:600;' : ''}">${coberto ? 'Incluso no plano' : fmtBRLNum(s.price)}</span>
+    </div>`;
+  }).join('');
+
+  qid('sum-services').innerHTML = itensHtml || '—';
   qid('sum-barber').textContent   = barber ? barber.name : '—';
   qid('sum-date').textContent     = state.selectedDate || '—';
   qid('sum-time').textContent     = state.selectedTime || '—';
   qid('sum-name').textContent     = state.clientName;
   qid('sum-phone').textContent    = state.clientPhone;
-  qid('sum-total-val').textContent = fmtBRLNum(total);
+  qid('sum-total-val').textContent = fmtBRLNum(calcularTotal());
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -1963,7 +2038,9 @@ async function confirmBooking() {
   btn.textContent = 'Salvando…';
 
   const barber   = BARBERS.find(b => b.id === state.selectedBarber);
-  const total    = state.selectedServices.reduce((s, id) => s + (SERVICES.find(x => x.id === id)?.price || 0), 0);
+  const temPlano = !!state.planoAtivo;
+  const total    = calcularTotal();
+  const totalCheio = state.selectedServices.reduce((s, id) => s + (SERVICES.find(x => x.id === id)?.price || 0), 0);
   const svcNames = state.selectedServices.map(id => SERVICES.find(x => x.id === id)?.name);
   const svcIds   = state.selectedServices;
 
@@ -1975,6 +2052,9 @@ async function confirmBooking() {
     obs:          state.clientObs,
     servicos:     svcIds,
     total:        total,
+    totalCheio:   totalCheio,
+    planoAplicado: temPlano,
+    planoNome:    temPlano ? (state.planoAtivo.planoNome || '') : '',
     barbeiroId:   state.selectedBarber,
     data:         state.selectedDate,
     hora:         state.selectedTime,
@@ -2038,6 +2118,9 @@ function resetWizard() {
   state.clientPhone      = '';
   state.clientObs        = '';
   state.bookedSlots      = [];
+  state.planoAtivo       = null;
+  const statusEl = qid('plano-status');
+  if (statusEl) statusEl.style.display = 'none';
   renderServices();
   renderBarbers();
   goStep(1);
@@ -2078,6 +2161,7 @@ qid('client-phone').addEventListener('input', function() {
   else if (v.length >= 7) v = `(${v.slice(0,2)}) ${v.slice(2,6)}-${v.slice(6)}`;
   else if (v.length >= 3) v = `(${v.slice(0,2)}) ${v.slice(2)}`;
   this.value = v;
+  onPhoneInput(v);
 });
 
 /* ═══════════════════════════════════════════════════════════
