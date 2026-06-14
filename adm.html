@@ -903,26 +903,43 @@ tr:hover td{background:rgba(255,255,255,.02);}
       ══════════════════════════════ -->
       <div class="panel" id="panel-planos">
         <div class="ph">
-          <div class="ph-left"><h1>Planos</h1><p>Gerencie os planos de assinatura exibidos no site</p></div>
-          <div class="ph-actions"><button class="btn btn-primary" onclick="openPlano()">+ Novo Plano</button></div>
-        </div>
-        <div class="chart-grid chart-grid-2" style="margin-bottom:16px;">
-          <div class="chart-card">
-            <div class="chart-head"><div><div class="chart-title">Planos Ativos</div><div class="chart-sub">Exibidos no site</div></div></div>
-            <div id="planos-ativos-list" style="display:flex;flex-direction:column;gap:10px;min-height:60px;"></div>
+          <div class="ph-left"><h1>Planos</h1><p>Gerencie os planos de assinatura e os clientes assinantes</p></div>
+          <div class="ph-actions" id="planos-actions">
+            <button class="btn btn-primary" onclick="openPlano()">+ Novo Plano</button>
           </div>
-          <div class="chart-card">
-            <div class="chart-head"><div><div class="chart-title">Como funciona</div></div></div>
-            <div style="font-size:.82rem;color:var(--text3);line-height:1.7;">
-              <p>✅ Crie quantos planos desejar (Bronze, Prata, Ouro…)</p>
-              <p style="margin-top:6px">✅ Apenas planos com status <b style="color:var(--ok)">Ativo</b> aparecem no site</p>
-              <p style="margin-top:6px">✅ O site atualiza automaticamente ao salvar</p>
-              <p style="margin-top:6px">✅ Sem plano ativo → seção oculta no site</p>
+        </div>
+
+        <div id="assin-alertas" style="display:none;margin-bottom:16px;"></div>
+
+        <div class="chart-tabs" style="margin-bottom:16px;">
+          <button class="chart-tab active" onclick="switchContent('planos-lista',this)">📋 Planos</button>
+          <button class="chart-tab" onclick="switchContent('planos-assinantes',this)">👥 Assinantes</button>
+        </div>
+
+        <div class="content-tab active" id="ct-planos-lista">
+          <div class="chart-grid chart-grid-2" style="margin-bottom:16px;">
+            <div class="chart-card">
+              <div class="chart-head"><div><div class="chart-title">Planos Ativos</div><div class="chart-sub">Exibidos no site</div></div></div>
+              <div id="planos-ativos-list" style="display:flex;flex-direction:column;gap:10px;min-height:60px;"></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-head"><div><div class="chart-title">Como funciona</div></div></div>
+              <div style="font-size:.82rem;color:var(--text3);line-height:1.7;">
+                <p>✅ Crie quantos planos desejar (Bronze, Prata, Ouro…)</p>
+                <p style="margin-top:6px">✅ Apenas planos com status <b style="color:var(--ok)">Ativo</b> aparecem no site</p>
+                <p style="margin-top:6px">✅ O site atualiza automaticamente ao salvar</p>
+                <p style="margin-top:6px">✅ Sem plano ativo → seção oculta no site</p>
+              </div>
             </div>
           </div>
+          <div class="tw"><div class="ox"><table><thead><tr><th>Nome</th><th>Valor/mês</th><th>Benefícios</th><th>Cor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tb-planos"></tbody></table></div></div>
         </div>
-        <div class="tw"><div class="ox"><table><thead><tr><th>Nome</th><th>Valor/mês</th><th>Benefícios</th><th>Cor</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tb-planos"></tbody></table></div></div>
+
+        <div class="content-tab" id="ct-planos-assinantes" style="display:none;">
+          <div class="tw"><div class="ox"><table><thead><tr><th>Cliente</th><th>Plano</th><th>Valor/mês</th><th>Pagamento</th><th>Próx. cobrança</th><th>Status</th><th>Ações</th></tr></thead><tbody id="tb-assinantes"></tbody></table></div></div>
+        </div>
       </div>
+
 
       <!-- ══════════════════════════════
            METAS
@@ -1166,7 +1183,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
       <input type="hidden" id="rec-id">
       <div class="fgrid">
         <div class="fg"><label>Descrição</label><input type="text" id="rec-desc" placeholder="Ex: Corte + Barba"></div>
-        <div class="fg"><label>Categoria</label><select id="rec-cat"><option value="servico">Serviço</option><option value="produto">Produto</option><option value="avulso">Avulso</option><option value="outro">Outro</option></select></div>
+        <div class="fg"><label>Categoria</label><select id="rec-cat"><option value="servico">Serviço</option><option value="produto">Produto</option><option value="assinatura">Assinatura</option><option value="avulso">Avulso</option><option value="outro">Outro</option></select></div>
         <div class="fg"><label>Valor (R$)</label><input type="number" id="rec-val" step="0.01"></div>
         <div class="fg"><label>Data</label><input type="date" id="rec-data"></div>
         <div class="fg"><label>Cliente (opcional)</label><select id="rec-cli"></select></div>
@@ -1316,6 +1333,27 @@ tr:hover td{background:rgba(255,255,255,.02);}
   </div>
 </div>
 
+<div class="mo" id="mo-assinante">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title" id="mo-assinante-t">Novo Assinante</div><div class="modal-x" onclick="closeMo('mo-assinante')">✕</div></div>
+    <div class="modal-body">
+      <input type="hidden" id="as-id">
+      <div class="fgrid">
+        <div class="fg"><label>Cliente</label><select id="as-cli"></select></div>
+        <div class="fg"><label>Plano</label><select id="as-plano" onchange="onAsPlanoChange()"></select></div>
+        <div class="fg"><label>Valor Mensal (R$)</label><input type="number" id="as-valor" step="0.01"></div>
+        <div class="fg"><label>Forma de Pagamento</label><input type="text" id="as-pgto" placeholder="Ex: Pix, Dinheiro, Cartão..."></div>
+        <div class="fg"><label>Data de Início</label><input type="date" id="as-inicio" onchange="onAsInicioChange()"></div>
+        <div class="fg"><label>Próxima Cobrança</label><input type="date" id="as-prox"></div>
+        <div class="fg"><label>Status</label><select id="as-st"><option value="ativo">Ativo</option><option value="cancelado">Cancelado</option></select></div>
+      </div>
+      <div class="fg" style="margin-top:12px;"><label>Observações</label><textarea id="as-obs" placeholder="Observações sobre a assinatura..."></textarea></div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeMo('mo-assinante')">Cancelar</button><button class="btn btn-primary" onclick="saveAssinante()">💾 Salvar Assinante</button></div>
+  </div>
+</div>
+
+
 <!-- Overlay mobile sidebar -->
 <div id="sb-overlay" style="display:none;position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.5);" onclick="document.getElementById('sidebar').classList.remove('open');document.getElementById('sb-overlay').style.display='none';"></div>
  
@@ -1352,7 +1390,7 @@ async function apiGetConfig(chave)       { return _apiFetch(API_URL+'/api/config
 
 // ── Carrega tudo no boot ─────────────────────────────────────
 const CHAVES_CONFIG = ['config','hero','localizacao','horarios','galeria','planos','metas','clube','rodape','theme','receitas_mes_ant'];
-const CHAVES_LISTA  = ['agendamentos','clientes','servicos','produtos','barbeiros','receitas','despesas'];
+const CHAVES_LISTA  = ['agendamentos','clientes','servicos','produtos','barbeiros','receitas','despesas','assinaturas'];
 
 async function loadAllCache() {
   await Promise.all([
@@ -1404,7 +1442,7 @@ function rerenderPainel(p){
   else if(p==='servicos'){ _svcs=DB.get('servicos',[]); renderSvc(); buildSvcRanking(); buildSvcChart2(); }
   else if(p==='produtos'){ _prods=DB.get('produtos',[]); renderProd(); buildProdRanking(); buildProdEstoqueAlerts(); }
   else if(p==='barbeiros'){ loadBarb(); }
-  else if(p==='planos'){ renderPlanos(); renderPlanosAtivos(); }
+  else if(p==='planos'){ renderPlanos(); renderPlanosAtivos(); renderAssinantes(); renderAssinAlertas(); }
   else if(p==='metas'){ renderMetasProgress(); }
   else if(p==='conteudo'){ /* conteúdo é editado manualmente, evita sobrescrever enquanto digita */ }
   else if(p==='alertas'){ buildAlerts(); }
@@ -1662,6 +1700,8 @@ const brl=(v)=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).
 const fDate=(s)=>{if(!s)return '—';const[y,m,d]=s.split('-');return `${d}/${m}/${y}`;};
 const today=()=>new Date().toISOString().split('T')[0];
 const todayMes=()=>new Date().toISOString().slice(0,7);
+function addDays(dateStr,days){const d=new Date(dateStr+'T00:00:00');d.setDate(d.getDate()+days);return d.toISOString().split('T')[0];}
+function diffDays(dateStr){const hoje=new Date(today()+'T00:00:00');const alvo=new Date(dateStr+'T00:00:00');return Math.round((alvo-hoje)/86400000);}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2);}
 function daysInMonth(y,m){return new Date(y,m,0).getDate();}
 function daysPassed(){const n=new Date();return n.getDate();}
@@ -1687,11 +1727,14 @@ function switchChart(group,period,btn){
   if(group==='fin')buildFinChart(period);
 }
 function switchContent(tab,btn){
-  document.querySelectorAll('.content-tab').forEach(x=>x.style.display='none');
-  document.querySelector('#ct-'+tab).style.display='block';
-  btn.closest('div').querySelectorAll('.chart-tab').forEach(b=>b.classList.remove('active'));
+  const group=btn.closest('.chart-tabs')||btn.parentElement;
+  const scope=group.parentElement;
+  scope.querySelectorAll('.content-tab').forEach(x=>x.style.display='none');
+  scope.querySelector('#ct-'+tab).style.display='block';
+  group.querySelectorAll('.chart-tab').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   if(tab==='galeria')loadGal();
+  if(tab==='planos-lista'||tab==='planos-assinantes')onPlanosTabSwitch(tab);
 }
  
 // ═══════════════════════════════════════════════════════════
@@ -2094,7 +2137,7 @@ function updateFinKPIs(){
 function renderRec(){
   const mes=(el('f-rec-mes')?.value)||todayMes();
   const recs=DB.get('receitas',[]).filter(r=>r.data?.startsWith(mes)).sort((a,b)=>b.data.localeCompare(a.data));
-  const catLabels={servico:'Serviço',produto:'Produto',avulso:'Avulso',outro:'Outro'};
+  const catLabels={servico:'Serviço',produto:'Produto',avulso:'Avulso',assinatura:'Assinatura',outro:'Outro'};
   el('tb-rec').innerHTML=recs.length?recs.map(r=>`<tr><td>${fDate(r.data)}</td><td>${r.descricao||'—'}</td><td><span class="badge b-conf">${catLabels[r.categoria]||r.categoria}</span></td><td style="color:var(--ok);font-weight:600">${brl(r.valor)}</td><td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu('rec${r.id}')">⋮</button><div class="dot-menu-drop" id="dm-rec${r.id}"><button class="dot-menu-item danger" onclick="delRec('${r.id}');dotMenu('rec${r.id}')">🗑 Excluir</button></div></div></td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text3)">Nenhuma receita.</td></tr>';
 }
 function renderDesp(){
@@ -2745,6 +2788,8 @@ function loadPlanos(){
   _planos=DB.get('planos',[]);
   renderPlanos();
   renderPlanosAtivos();
+  renderAssinantes();
+  renderAssinAlertas();
 }
 
 function renderPlanos(){
@@ -2844,6 +2889,184 @@ function renderPlBens(){
 function rmPlBen(i){_plBens.splice(i,1);renderPlBens();}
 
 // ═══════════════════════════════════════════════════════════
+// ASSINANTES (Clientes vinculados a um Plano, cobrança recorrente)
+// ═══════════════════════════════════════════════════════════
+function onPlanosTabSwitch(tab){
+  if(tab==='planos-assinantes'){
+    el('planos-actions').innerHTML='<button class="btn btn-primary" onclick="openAssinante()">+ Novo Assinante</button>';
+    renderAssinantes();
+  } else {
+    el('planos-actions').innerHTML='<button class="btn btn-primary" onclick="openPlano()">+ Novo Plano</button>';
+  }
+  renderAssinAlertas();
+}
+
+function renderAssinantes(){
+  const tb=el('tb-assinantes');if(!tb)return;
+  const lista=DB.get('assinaturas',[]);
+  tb.innerHTML=lista.length?lista.map(a=>{
+    const d=diffDays(a.proximaCobranca);
+    let statusBadge;
+    if(a.status==='cancelado') statusBadge='<span class="badge b-off">Cancelado</span>';
+    else if(d<0) statusBadge='<span class="badge b-canc">Vencido</span>';
+    else if(d<=2) statusBadge='<span class="badge b-pend">Vence em '+(d===0?'hoje':d+'d')+'</span>';
+    else statusBadge='<span class="badge b-on">Ativo</span>';
+    return `<tr>
+    <td><b>${a.clienteNome||'—'}</b></td>
+    <td>${a.planoNome||'—'}</td>
+    <td style="color:var(--gold);font-weight:600">${brl(a.valor)}</td>
+    <td style="font-size:.78rem;color:var(--text3)">${a.formaPagamento||'—'}</td>
+    <td>${fDate(a.proximaCobranca)}</td>
+    <td>${statusBadge}</td>
+    <td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu('as${a.id}')">⋮</button><div class="dot-menu-drop" id="dm-as${a.id}">
+      <button class="dot-menu-item success" onclick="cobrarAssinante('${a.id}');dotMenu('as${a.id}')">💰 Cobrar</button>
+      <button class="dot-menu-item" onclick="editAssinante('${a.id}');dotMenu('as${a.id}')">✏️ Editar</button>
+      <button class="dot-menu-item danger" onclick="delAssinante('${a.id}');dotMenu('as${a.id}')">🗑 Excluir</button>
+    </div></div></td>
+  </tr>`;
+  }).join(''):'<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)">Nenhum assinante cadastrado. Clique em "+ Novo Assinante" para começar.</td></tr>';
+}
+
+function renderAssinAlertas(){
+  const wrap=el('assin-alertas');if(!wrap)return;
+  const lista=DB.get('assinaturas',[]).filter(a=>a.status!=='cancelado');
+  const itens=lista.map(a=>({a,d:diffDays(a.proximaCobranca)})).filter(x=>x.d<=2);
+  if(!itens.length){wrap.style.display='none';wrap.innerHTML='';return;}
+  itens.sort((x,y)=>x.d-y.d);
+  wrap.style.display='block';
+  wrap.innerHTML=`<div class="chart-card" style="border:1px solid rgba(245,158,11,.3)">
+    <div class="chart-head"><div><div class="chart-title">⏰ Cobranças próximas / vencidas</div><div class="chart-sub">Clientes com assinatura vencendo em até 2 dias ou já vencida</div></div></div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+    ${itens.map(({a,d})=>{
+      const venceu=d<0;
+      const txt=venceu?`Venceu há ${Math.abs(d)} dia(s)`:(d===0?'Vence hoje':`Vence em ${d} dia(s)`);
+      const cor=venceu?'var(--err)':'var(--warn)';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--s2);border-radius:var(--r2);border-left:3px solid ${cor}">
+        <div style="flex:1">
+          <div style="font-size:.85rem;font-weight:600">${a.clienteNome}</div>
+          <div style="font-size:.72rem;color:var(--text3)">${a.planoNome} · ${brl(a.valor)}/mês · <span style="color:${cor};font-weight:600">${txt}</span></div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="cobrarAssinante('${a.id}')">💰 Cobrar</button>
+      </div>`;
+    }).join('')}
+    </div>
+  </div>`;
+}
+
+function populateAssinanteSelects(){
+  const clis=DB.get('clientes',[]);
+  el('as-cli').innerHTML=clis.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('')||'<option value="">Sem clientes</option>';
+  el('as-plano').innerHTML=_planos.map(p=>`<option value="${p.id}" data-preco="${p.preco||0}">${p.nome}</option>`).join('')||'<option value="">Sem planos</option>';
+}
+
+function onAsPlanoChange(){
+  const opt=el('as-plano').selectedOptions[0];
+  if(opt) el('as-valor').value=opt.dataset.preco||0;
+}
+
+function onAsInicioChange(){
+  const inicio=el('as-inicio').value;
+  if(inicio) el('as-prox').value=addDays(inicio,30);
+}
+
+function openAssinante(){
+  populateAssinanteSelects();
+  el('as-id').value='';
+  el('mo-assinante-t').textContent='Novo Assinante';
+  el('as-pgto').value='';el('as-obs').value='';
+  el('as-st').value='ativo';
+  el('as-inicio').value=today();
+  el('as-prox').value=addDays(today(),30);
+  onAsPlanoChange();
+  openMo('mo-assinante');
+}
+
+function editAssinante(id){
+  const a=DB.get('assinaturas',[]).find(x=>x.id===id);if(!a)return;
+  populateAssinanteSelects();
+  el('as-id').value=id;
+  el('mo-assinante-t').textContent='Editar Assinante';
+  const cOpt=el('as-cli').querySelector(`option[value="${a.clienteId}"]`);if(cOpt)cOpt.selected=true;
+  const pOpt=el('as-plano').querySelector(`option[value="${a.planoId}"]`);if(pOpt)pOpt.selected=true;
+  el('as-valor').value=a.valor||0;
+  el('as-pgto').value=a.formaPagamento||'';
+  el('as-inicio').value=a.dataInicio||today();
+  el('as-prox').value=a.proximaCobranca||addDays(today(),30);
+  el('as-st').value=a.status||'ativo';
+  el('as-obs').value=a.obs||'';
+  openMo('mo-assinante');
+}
+
+async function saveAssinante(){
+  const id=el('as-id').value;
+  const cliId=el('as-cli').value;
+  const cliObj=DB.get('clientes',[]).find(c=>c.id===cliId);
+  const plOpt=el('as-plano').selectedOptions[0];
+  const planoId=el('as-plano').value;
+  const planoObj=_planos.find(p=>p.id===planoId);
+  const data={
+    clienteId:cliId, clienteNome:cliObj?.nome||'',
+    planoId:planoId, planoNome:planoObj?.nome||plOpt?.textContent||'',
+    valor:parseFloat(el('as-valor').value)||0,
+    formaPagamento:el('as-pgto').value.trim(),
+    dataInicio:el('as-inicio').value||today(),
+    proximaCobranca:el('as-prox').value||addDays(today(),30),
+    status:el('as-st').value,
+    obs:el('as-obs').value.trim()
+  };
+  if(!data.clienteId){toast('Selecione o cliente.','er');return;}
+  if(!data.planoId){toast('Selecione o plano.','er');return;}
+  try {
+    let salvo;
+    if(id){ salvo = await apiPut('assinaturas', id, data); }
+    else  { salvo = await apiPost('assinaturas', data); }
+    if(!salvo) return;
+    let list=DB.get('assinaturas',[]);
+    if(id){ const i=list.findIndex(x=>x.id===id); if(i>-1)list[i]=salvo; }
+    else   { list.push(salvo); }
+    _cache['assinaturas']=list;
+    toast('Assinante salvo!'); closeMo('mo-assinante'); renderAssinantes(); renderAssinAlertas();
+  } catch(e){ toast('Erro: '+e.message,'er'); }
+}
+
+async function delAssinante(id){
+  if(!confirm('Excluir este assinante?'))return;
+  try {
+    await apiDelete('assinaturas', id);
+    _cache['assinaturas']=DB.get('assinaturas',[]).filter(x=>x.id!==id);
+    toast('Assinante excluído.'); renderAssinantes(); renderAssinAlertas();
+  } catch(e){ toast('Erro: '+e.message,'er'); }
+}
+
+// Registra o pagamento como receita e avança a próxima cobrança +30 dias
+async function cobrarAssinante(id){
+  const a=DB.get('assinaturas',[]).find(x=>x.id===id);if(!a)return;
+  if(!confirm(`Confirmar cobrança de ${brl(a.valor)} de ${a.clienteNome} (${a.planoNome})?`))return;
+  try {
+    const recData={
+      descricao:`Assinatura — ${a.clienteNome} (${a.planoNome})`,
+      categoria:'assinatura',
+      valor:parseFloat(a.valor||0),
+      data:today(),
+      clienteId:a.clienteId||'',
+      obs:'Cobrança de plano de assinatura'+(a.formaPagamento?' · '+a.formaPagamento:''),
+      assinaturaId:id
+    };
+    const novaRec=await apiPost('receitas',recData);
+    if(novaRec) _cache['receitas']=[...(DB.get('receitas',[])), novaRec];
+
+    const novaProx=addDays(a.proximaCobranca, 30);
+    const atualizado=await apiPut('assinaturas', id, {proximaCobranca:novaProx, ultimaCobranca:today()});
+    if(atualizado){
+      let list=DB.get('assinaturas',[]); const i=list.findIndex(x=>x.id===id); if(i>-1)list[i]=atualizado;
+      _cache['assinaturas']=list;
+    }
+    toast('Cobrança registrada! Próxima cobrança: '+fDate(novaProx),'ok');
+    renderAssinantes(); renderAssinAlertas(); updateFinKPIs(); loadDashboard();
+  } catch(e){ toast('Erro: '+e.message,'er'); }
+}
+
+// ═══════════════════════════════════════════════════════════
 
 // ─── Expõe funções para o HTML inline ───────────────────────
 window.toggleTheme=toggleTheme; window.toggleSidebar=toggleSidebar; window.goTo=goTo;
@@ -2865,6 +3088,9 @@ window.exportCSV=exportCSV; window.exportPrint=exportPrint;
 window.switchChart=switchChart; window.switchContent=switchContent; window.loadDashboard=loadDashboard;
 window.openPlano=openPlano; window.editPlano=editPlano; window.savePlano=savePlano; window.delPlano=delPlano;
 window.addPlBen=addPlBen; window.rmPlBen=rmPlBen; window.dotMenu=dotMenu;
+window.openAssinante=openAssinante; window.editAssinante=editAssinante; window.saveAssinante=saveAssinante;
+window.delAssinante=delAssinante; window.cobrarAssinante=cobrarAssinante;
+window.onAsPlanoChange=onAsPlanoChange; window.onAsInicioChange=onAsInicioChange;
 
 // ── BOOT ─────────────────────────────────────────────────────
 checkSession();
