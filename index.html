@@ -116,7 +116,7 @@ function hydrateSiteConfig() {
 // ── Carrega tudo do Firestore, depois inicia o site ──────────
 async function iniciarSite() {
   const chaves = ['config','hero','localizacao','rodape','clube','planos',
-                  'servicos','barbeiros','horarios','galeria','agendamentos','clientes'];
+                  'servicos','barbeiros','horarios','galeria','agendamentos','clientes','assinaturas'];
   await Promise.all(chaves.map(k => fbGet(k)));
 
   // Aguarda o segundo módulo registrar as funções no window
