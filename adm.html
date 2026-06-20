@@ -1196,6 +1196,26 @@ tr:hover td{background:rgba(255,255,255,.02);}
   </div>
 </div>
  
+<!-- Modal Confirmar Pagamento (Assinatura) -->
+<div class="mo" id="mo-pag">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">Confirmar Pagamento</div><div class="modal-x" onclick="closeMo('mo-pag')">✕</div></div>
+    <div class="modal-body">
+      <input type="hidden" id="pag-assinatura-id">
+      <p id="pag-resumo" style="margin-bottom:14px;color:var(--txt2,#888)"></p>
+      <div class="fg"><label>Forma de pagamento</label>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px">
+          <button type="button" class="btn btn-ghost" onclick="confirmarPagamentoAssinatura('Pix')">🔑 Pix</button>
+          <button type="button" class="btn btn-ghost" onclick="confirmarPagamentoAssinatura('Dinheiro')">💵 Dinheiro</button>
+          <button type="button" class="btn btn-ghost" onclick="confirmarPagamentoAssinatura('Cartão')">💳 Cartão</button>
+          <button type="button" class="btn btn-ghost" onclick="confirmarPagamentoAssinatura('Outro')">📝 Outro</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn btn-ghost" onclick="closeMo('mo-pag')">Cancelar</button></div>
+  </div>
+</div>
+
 <!-- Modal Despesa -->
 <div class="mo" id="mo-desp">
   <div class="modal">
@@ -2972,7 +2992,7 @@ function renderAssinantes(){
     <td>${fDate(a.proximaCobranca)}</td>
     <td>${statusBadge}</td>
     <td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu(this,'as${a.id}')">⋮</button><div class="dot-menu-drop" id="dm-as${a.id}">
-      <button class="dot-menu-item success" onclick="cobrarAssinante('${a.id}');dotMenu(null,'as${a.id}')">💰 Cobrar</button>
+      <button class="dot-menu-item success" onclick="cobrarAssinante('${a.id}');dotMenu(null,'as${a.id}')">✅ Confirmar Pagamento</button>
       <button class="dot-menu-item" onclick="avisarAssinanteWhats('${a.id}');dotMenu(null,'as${a.id}')">📲 Avisar WhatsApp</button>
       <button class="dot-menu-item" onclick="editAssinante('${a.id}');dotMenu(null,'as${a.id}')">✏️ Editar</button>
       <button class="dot-menu-item danger" onclick="delAssinante('${a.id}');dotMenu(null,'as${a.id}')">🗑 Excluir</button>
@@ -3000,7 +3020,7 @@ function renderAssinAlertas(){
           <div style="font-size:.85rem;font-weight:600">${a.clienteNome}</div>
           <div style="font-size:.72rem;color:var(--text3)">${a.planoNome} · ${brl(a.valor)}/mês · <span style="color:${cor};font-weight:600">${txt}</span></div>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="cobrarAssinante('${a.id}')">💰 Cobrar</button>
+        <button class="btn btn-primary btn-sm" onclick="cobrarAssinante('${a.id}')">✅ Confirmar Pagamento</button>
         <button class="btn btn-ghost btn-sm" onclick="avisarAssinanteWhats('${a.id}')">📲 Avisar</button>
       </div>`;
     }).join('')}
@@ -3096,7 +3116,15 @@ async function delAssinante(id){
 // Registra o pagamento como receita e avança a próxima cobrança +30 dias
 async function cobrarAssinante(id){
   const a=DB.get('assinaturas',[]).find(x=>x.id===id);if(!a)return;
-  if(!confirm(`Confirmar cobrança de ${brl(a.valor)} de ${a.clienteNome} (${a.planoNome})?`))return;
+  document.getElementById('pag-assinatura-id').value=id;
+  document.getElementById('pag-resumo').textContent=`${a.clienteNome} (${a.planoNome}) — ${brl(a.valor)}. Escolha a forma de pagamento:`;
+  openMo('mo-pag');
+}
+
+async function confirmarPagamentoAssinatura(formaPagamento){
+  const id=document.getElementById('pag-assinatura-id').value;
+  const a=DB.get('assinaturas',[]).find(x=>x.id===id);if(!a)return;
+  closeMo('mo-pag');
   try {
     const recData={
       descricao:`Assinatura — ${a.clienteNome} (${a.planoNome})`,
@@ -3104,7 +3132,8 @@ async function cobrarAssinante(id){
       valor:parseFloat(a.valor||0),
       data:today(),
       clienteId:a.clienteId||'',
-      obs:'Cobrança de plano de assinatura'+(a.formaPagamento?' · '+a.formaPagamento:''),
+      obs:'Cobrança de plano de assinatura · '+formaPagamento,
+      formaPagamento,
       assinaturaId:id
     };
     const novaRec=await apiPost('receitas',recData);
@@ -3116,7 +3145,7 @@ async function cobrarAssinante(id){
       let list=DB.get('assinaturas',[]); const i=list.findIndex(x=>x.id===id); if(i>-1)list[i]=atualizado;
       _cache['assinaturas']=list;
     }
-    toast('Cobrança registrada! Próxima cobrança: '+fDate(novaProx),'ok');
+    toast(`Pagamento via ${formaPagamento} registrado! Próxima cobrança: `+fDate(novaProx),'ok');
     renderAssinantes(); renderAssinAlertas(); updateFinKPIs(); loadDashboard();
   } catch(e){ toast('Erro: '+e.message,'er'); }
 }
@@ -3155,7 +3184,7 @@ window.switchChart=switchChart; window.switchContent=switchContent; window.loadD
 window.openPlano=openPlano; window.editPlano=editPlano; window.savePlano=savePlano; window.delPlano=delPlano;
 window.addPlBen=addPlBen; window.rmPlBen=rmPlBen; window.dotMenu=dotMenu;
 window.openAssinante=openAssinante; window.editAssinante=editAssinante; window.saveAssinante=saveAssinante;
-window.delAssinante=delAssinante; window.cobrarAssinante=cobrarAssinante; window.avisarAssinanteWhats=avisarAssinanteWhats;
+window.delAssinante=delAssinante; window.cobrarAssinante=cobrarAssinante; window.avisarAssinanteWhats=avisarAssinanteWhats; window.confirmarPagamentoAssinatura=confirmarPagamentoAssinatura;
 window.onAsPlanoChange=onAsPlanoChange; window.onAsInicioChange=onAsInicioChange;
 
 // ── BOOT ─────────────────────────────────────────────────────
