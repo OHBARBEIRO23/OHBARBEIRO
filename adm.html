@@ -2305,7 +2305,7 @@ function renderCli(){
   el('tb-cli').innerHTML=list.length?list.map(c=>{
     const diff=c.ultimaVisita?(Date.now()-new Date(c.ultimaVisita))/86400000:999;
     const st=diff<=30?'<span class="badge b-on">Ativo</span>':diff<=60?'<span class="badge b-pend">30d+</span>':diff<=90?'<span class="badge b-off">60d+</span>':'<span class="badge b-canc">90d+</span>';
-    return `<tr><td><b>${c.nome||'—'}</b></td><td>${c.telefone||'—'}</td><td style="font-weight:600">${c.visitas||0}</td><td>${fDate(c.ultimaVisita)||'Nunca'}</td><td style="color:var(--gold)">${brl(c.totalGasto)}</td><td>${st}</td><td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu(this,'cli${c.id}')">⋮</button><div class="dot-menu-drop" id="dm-cli${c.id}"><button class="dot-menu-item" onclick="editCli('${c.id}');dotMenu(null,'cli${c.id}')">✏️ Editar</button><button class="dot-menu-item danger" onclick="delCli('${c.id}');dotMenu(null,'cli${c.id}')">🗑 Excluir</button></div></div></td></tr>`;
+    return `<tr><td><b>${c.nome||'—'}</b></td><td>${c.telefone||'—'}</td><td style="font-weight:600">${c.visitas||0}</td><td>${fDate(c.ultimaVisita)||'Nunca'}</td><td style="color:var(--gold)">${brl(c.totalGasto)}</td><td>${st}</td><td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu(this,'cli${c.id}')">⋮</button><div class="dot-menu-drop" id="dm-cli${c.id}"><button class="dot-menu-item" onclick="editCli('${c.id}');dotMenu(null,'cli${c.id}')">✏️ Editar</button><button class="dot-menu-item" onclick="pausarBotCliente('${c.id}');dotMenu(null,'cli${c.id}')">🔇 Pausar Bot</button><button class="dot-menu-item" onclick="retomarBotCliente('${c.id}');dotMenu(null,'cli${c.id}')">🔊 Retomar Bot</button><button class="dot-menu-item danger" onclick="delCli('${c.id}');dotMenu(null,'cli${c.id}')">🗑 Excluir</button></div></div></td></tr>`;
   }).join(''):'<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)">Nenhum cliente encontrado.</td></tr>';
 }
 function buildCliRanking(){
@@ -2323,6 +2323,25 @@ function buildCliInativos(){
 }
 function openCli(){el('cli-id').value='';el('mo-cli-t').textContent='Novo Cliente';['cli-nome','cli-tel','cli-email','cli-obs'].forEach(f=>el(f).value='');el('cli-nasc').value='';openMo('mo-cli');}
 function editCli(id){const c=_clis.find(x=>x.id===id);if(!c)return;el('cli-id').value=id;el('mo-cli-t').textContent='Editar Cliente';el('cli-nome').value=c.nome||'';el('cli-tel').value=c.telefone||'';el('cli-nasc').value=c.nascimento||'';el('cli-email').value=c.email||'';el('cli-obs').value=c.obs||'';openMo('mo-cli');}
+
+async function pausarBotCliente(id){
+  const c=_clis.find(x=>x.id===id);if(!c)return;
+  if(!c.telefone){toast('Esse cliente não tem telefone cadastrado.','er');return;}
+  if(!confirm(`Pausar o bot de WhatsApp para ${c.nome}? Ele vai parar de responder automaticamente para esse número.`))return;
+  try{
+    await apiPost('whatsapp/pausar',{telefone:c.telefone,motivo:'painel_admin'});
+    toast(`Bot pausado para ${c.nome}.`,'ok');
+  }catch(e){toast('Erro: '+e.message,'er');}
+}
+
+async function retomarBotCliente(id){
+  const c=_clis.find(x=>x.id===id);if(!c)return;
+  if(!c.telefone){toast('Esse cliente não tem telefone cadastrado.','er');return;}
+  try{
+    await apiPost('whatsapp/retomar',{telefone:c.telefone});
+    toast(`Bot reativado para ${c.nome}.`,'ok');
+  }catch(e){toast('Erro: '+e.message,'er');}
+}
 async function saveCli(){
   const id=el('cli-id').value;
   const novoTel=(el('cli-tel').value||'').replace(/\D/g,'');
@@ -3170,7 +3189,7 @@ window.saveAg=saveAg; window.finalizarAg=finalizarAg; window.delAg=delAg;
 window.clearAgF=clearAgF; window.renderAg=renderAg;
 window.openRec=openRec; window.saveRec=saveRec; window.delRec=delRec;
 window.openDesp=openDesp; window.saveDesp=saveDesp; window.delDesp=delDesp;
-window.openCli=openCli; window.editCli=editCli; window.saveCli=saveCli; window.delCli=delCli;
+window.openCli=openCli; window.editCli=editCli; window.saveCli=saveCli; window.delCli=delCli; window.pausarBotCliente=pausarBotCliente; window.retomarBotCliente=retomarBotCliente;
 window.openSvc=openSvc; window.editSvc=editSvc; window.saveSvc=saveSvc; window.delSvc=delSvc;
 window.openProd=openProd; window.editProd=editProd; window.saveProd=saveProd; window.delProd=delProd;
 window.venderProd=venderProd;
