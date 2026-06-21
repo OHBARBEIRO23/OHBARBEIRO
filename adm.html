@@ -2121,6 +2121,21 @@ async function saveAg(){
     if(id){ const i=list.findIndex(x=>x.id===id); if(i>-1)list[i]=salvo; }
     else   { list.push(salvo); }
     _cache['agendamentos']=list;
+
+    // Confirmação automática por WhatsApp — só em agendamento NOVO (não em edição)
+    if(!id && cliObj?.telefone){
+      const svcsCad=DB.get('servicos',[]);
+      const barbCad=DB.get('barbeiros',[]).find(b=>b.id===data.barbeiroId);
+      const nomesSvcArr=svcs.map(sid=>svcsCad.find(s=>s.id===sid)?.nome).filter(Boolean);
+      apiPost('whatsapp/confirmar-agendamento', {
+        telefone: cliObj.telefone,
+        svcNomes: nomesSvcArr,
+        data: data.data,
+        hora: data.hora,
+        barbeiro: barbCad?.nome || '',
+        total: data.total,
+      }).catch(()=>{});
+    }
     // Atualiza histórico do cliente se finalizado
     if(data.status==='finalizado') atualizarHistoricoCliente(cliId, salvo||{...data,id});
     // Lança o valor como receita ao finalizar pela primeira vez (evita duplicar)
