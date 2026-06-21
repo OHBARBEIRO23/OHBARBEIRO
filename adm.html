@@ -2142,7 +2142,28 @@ async function saveAg(){
       } catch(e){ console.error('Erro ao lançar receita do agendamento:', e); }
     }
     toast('Agendamento salvo!'); closeMo('mo-ag'); renderAg(); updateFinKPIs(); loadDashboard();
-  } catch(e){ toast('Erro ao salvar: '+e.message,'er'); }
+  } catch(e){ toast('Erro ao salvar: '+e.message,'er'); return; }
+
+  // Confirmação automática por WhatsApp — roda DEPOIS e FORA do bloco
+  // acima, só em agendamento NOVO (não em edição). Isolada para nunca
+  // poder causar "erro ao salvar" no painel.
+  if(!id && cliObj?.telefone){
+    setTimeout(()=>{
+      try{
+        const svcsCad=DB.get('servicos',[]);
+        const barbCad=DB.get('barbeiros',[]).find(b=>b.id===data.barbeiroId);
+        const nomesSvcArr=svcs.map(sid=>svcsCad.find(s=>s.id===sid)?.nome).filter(Boolean);
+        apiPost('whatsapp/confirmar-agendamento', {
+          telefone: cliObj.telefone,
+          svcNomes: nomesSvcArr,
+          data: data.data,
+          hora: data.hora,
+          barbeiro: barbCad?.nome || '',
+          total: data.total,
+        }).catch(()=>{});
+      }catch(e){}
+    }, 0);
+  }
 }
 async function finalizarAg(id){
   const ag=DB.get('agendamentos',[]).find(x=>x.id===id); if(!ag)return;

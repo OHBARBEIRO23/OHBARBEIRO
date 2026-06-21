@@ -2105,6 +2105,19 @@ async function confirmBooking() {
     btn.disabled = false;
     btn.textContent = '✓ Confirmar Agendamento';
   }
+
+  // Confirmação automática por WhatsApp — roda DEPOIS e FORA do bloco
+  // acima, então nunca pode causar "erro ao salvar" pro cliente, mesmo
+  // se a Z-API, o backend ou a rede falharem aqui.
+  setTimeout(() => {
+    try {
+      fetch(`${API_URL}/api/whatsapp/confirmar-agendamento`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(booking)
+      }).catch(() => {});
+    } catch(e) {}
+  }, 0);
 }
 
 function closeModal() { qid('modal-overlay').classList.remove('open'); }
