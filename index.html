@@ -2097,7 +2097,6 @@ async function confirmBooking() {
     const ags = BK.get('agendamentos') || [];
     ags.push(booking);
     BK.set('agendamentos', ags);
-
     qid('modal-overlay').classList.add('open');
     resetWizard();
   } catch(e) {
@@ -2106,17 +2105,6 @@ async function confirmBooking() {
     btn.disabled = false;
     btn.textContent = '✓ Confirmar Agendamento';
   }
-
-  // Confirmação automática por WhatsApp — totalmente isolada do fluxo
-  // de salvar o agendamento, pra nunca disparar "erro" pro cliente
-  // mesmo se a Z-API, o backend ou a rede falharem aqui.
-  try {
-    fetch(`${API_URL}/api/whatsapp/confirmar-agendamento`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(booking)
-    }).catch(() => {});
-  } catch(e) {}
 }
 
 function closeModal() { qid('modal-overlay').classList.remove('open'); }
