@@ -1020,16 +1020,35 @@ body::after {
   padding:40px 20px;
 }
 
-#gameCanvas{
-  background:#000;
-  border:2px solid #d4af37;
-  max-width:100%;
+#game-section {
+  text-align:center;
+  padding:60px 20px;
 }
 
-#score{
-  margin-top:10px;
-  font-size:18px;
-  font-weight:bold;
+#game-section h2 {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  margin-bottom: 24px;
+  color: var(--gold);
+}
+
+#game-wrapper {
+  display: inline-block;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 0 40px rgba(201,168,76,.2), 0 0 0 2px var(--gold-dark);
+}
+
+#gameCanvas {
+  background: #0A0A0A;
+  display: block;
+  max-width: 100%;
+}
+
+#score {
+  color: var(--gold);
+  font-weight: 700;
+  font-size: 1rem;
 }
 
 
@@ -1222,14 +1241,67 @@ body::after {
 <section id="game-section">
   <h2>🎮 Jogue Enquanto Espera</h2>
 
-  <canvas
-      id="gameCanvas"
-      width="400"
-      height="500">
-  </canvas>
+  <div id="game-wrapper" style="position:relative;display:inline-block;">
+    <canvas id="gameCanvas" width="400" height="500"></canvas>
 
-  <div id="score">
-      Pontos: 0
+    <!-- HUD: pontos + vidas -->
+    <div id="game-hud" style="
+      position:absolute;top:0;left:0;right:0;
+      display:flex;justify-content:space-between;align-items:center;
+      padding:10px 14px;
+      background:linear-gradient(180deg,rgba(0,0,0,.7) 0%,transparent 100%);
+      pointer-events:none;
+    ">
+      <span id="score" style="color:#C9A84C;font-weight:700;font-size:1rem;">Pontos: 0</span>
+      <span id="lives-display" style="font-size:1.2rem;letter-spacing:4px;">❤️❤️❤️</span>
+    </div>
+
+    <!-- Tela de início -->
+    <div id="game-start-screen" style="
+      position:absolute;inset:0;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      background:rgba(10,10,10,.88);
+      border-radius:8px;
+      gap:12px;
+    ">
+      <div style="font-size:3rem;">✂️</div>
+      <div style="font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;color:#C9A84C;">Space Barber</div>
+      <div style="color:#888;font-size:.85rem;text-align:center;max-width:260px;line-height:1.6;">
+        Mova o mouse (ou dedo) para pilotar a nave.<br>Destrua os inimigos antes que cheguem!
+      </div>
+      <div style="color:#C9A84C;font-size:.75rem;letter-spacing:.15em;margin-top:4px;">3 VIDAS · DIFICULDADE CRESCENTE</div>
+      <button onclick="startGame()" style="
+        margin-top:8px;
+        background:linear-gradient(135deg,#C9A84C,#9A7A30);
+        color:#0A0A0A;font-weight:700;font-size:.95rem;
+        border:none;padding:12px 36px;border-radius:50px;cursor:pointer;
+        box-shadow:0 4px 20px rgba(201,168,76,.4);
+        transition:.2s;
+      ">Jogar Agora ▶</button>
+    </div>
+
+    <!-- Tela de Game Over -->
+    <div id="game-over-screen" style="
+      position:absolute;inset:0;
+      display:none;flex-direction:column;align-items:center;justify-content:center;
+      background:rgba(10,10,10,.9);
+      border-radius:8px;
+      gap:10px;
+    ">
+      <div style="font-size:2.5rem;">💥</div>
+      <div style="font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:700;color:#ff4444;">GAME OVER</div>
+      <div style="color:#888;font-size:.85rem;">Sua pontuação</div>
+      <div id="final-score" style="font-family:'Playfair Display',serif;font-size:2.8rem;font-weight:700;color:#C9A84C;">0</div>
+      <div id="record-msg" style="color:#C9A84C;font-size:.78rem;font-weight:600;letter-spacing:.1em;min-height:18px;"></div>
+      <div id="best-score-display" style="color:#555;font-size:.78rem;min-height:16px;"></div>
+      <button onclick="startGame()" style="
+        margin-top:10px;
+        background:linear-gradient(135deg,#C9A84C,#9A7A30);
+        color:#0A0A0A;font-weight:700;font-size:.95rem;
+        border:none;padding:12px 36px;border-radius:50px;cursor:pointer;
+        box-shadow:0 4px 20px rgba(201,168,76,.4);
+      ">Jogar Novamente ↺</button>
+    </div>
   </div>
 </section>
 
@@ -2251,210 +2323,378 @@ window.reloadHorarios  = window.reloadHorarios;  // já definido acima
 window.__siteModuleReady = true;
 if (typeof window.__onSiteModuleReady === 'function') window.__onSiteModuleReady();
 
-//gamerame
- 
+// ═══════════════════════════════════════════════════════════
+// KEEP-ALIVE — evita que o Render (plano gratuito) hiberne
+// Faz um ping leve no backend a cada 8 minutos.
+// ═══════════════════════════════════════════════════════════
+(function keepAlive() {
+  const BACKEND = 'https://ohbarbeirobeckend-1.onrender.com';
+  const INTERVAL = 8 * 60 * 1000; // 8 minutos
+
+  function ping() {
+    fetch(BACKEND + '/api/ping', { method: 'GET', cache: 'no-store' })
+      .catch(() => {}); // silencioso — falha não afeta o site
+  }
+
+  // Primeiro ping após 1 minuto de carregamento
+  setTimeout(() => {
+    ping();
+    setInterval(ping, INTERVAL);
+  }, 60 * 1000);
+})();
+
+// ═══════════════════════════════════════
+// SPACE BARBER — jogo melhorado
+// Melhorias: fundo estrelado, 3 vidas,
+// dificuldade crescente, tela game over
+// ═══════════════════════════════════════
+(function() {
 
 const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+const ctx    = canvas.getContext("2d");
 
-let score = 0;
+// ── Estado ──
+let score, lives, running, animId;
+let enemySpeed, enemyInterval, bulletInterval;
+let enemyTimer, bulletTimer;
+let diffTimer, diffLevel;
+let invincible, invincibleTimer;
 
-const player = {
-    x: 180,
-    y: 430,
-    width: 40,
-    height: 40
-};
+// ── Objetos ──
+const player  = { x: 180, y: 430, width: 40, height: 40 };
+const bullets  = [];
+const enemies  = [];
+const particles = [];
 
-const bullets = [];
-const enemies = [];
+// ── Estrelas do fundo ──
+const STARS = Array.from({ length: 80 }, () => ({
+  x: Math.random() * 400,
+  y: Math.random() * 500,
+  r: Math.random() * 1.5 + 0.3,
+  speed: Math.random() * 0.4 + 0.1,
+  alpha: Math.random() * 0.6 + 0.3,
+}));
+
+// ─────────────────────────────────────────
+// INICIAR / RESETAR
+// ─────────────────────────────────────────
+function startGame() {
+  score       = 0;
+  lives       = 3;
+  running     = true;
+  diffLevel   = 0;
+  enemySpeed  = 2;
+  invincible  = false;
+  invincibleTimer = 0;
+
+  bullets.length  = 0;
+  enemies.length  = 0;
+  particles.length = 0;
+
+  player.x = 180;
+
+  document.getElementById("score").innerText = "Pontos: 0";
+  updateLivesDisplay();
+
+  // Esconde telas
+  document.getElementById("game-start-screen").style.display = "none";
+  document.getElementById("game-over-screen").style.display  = "none";
+
+  // Cancela timers antigos
+  clearInterval(enemyTimer);
+  clearInterval(bulletTimer);
+  clearInterval(diffTimer);
+
+  // Inimigos
+  enemyInterval = 900;
+  enemyTimer = setInterval(spawnEnemy, enemyInterval);
+
+  // Tiros
+  bulletTimer = setInterval(() => {
+    if (!running) return;
+    bullets.push({ x: player.x + 18, y: player.y });
+  }, 280);
+
+  // Dificuldade crescente
+  diffTimer = setInterval(() => {
+    if (!running) return;
+    diffLevel++;
+    enemySpeed = Math.min(2 + diffLevel * 0.4, 7);
+    const newInterval = Math.max(400, 900 - diffLevel * 70);
+    if (newInterval !== enemyInterval) {
+      enemyInterval = newInterval;
+      clearInterval(enemyTimer);
+      enemyTimer = setInterval(spawnEnemy, enemyInterval);
+    }
+  }, 5000);
+
+  // Reinicia loop
+  cancelAnimationFrame(animId);
+  gameLoop();
+}
+window.startGame = startGame;
+
+// ─────────────────────────────────────────
+// INIMIGOS
+// ─────────────────────────────────────────
+function spawnEnemy() {
+  if (!running) return;
+  enemies.push({
+    x: Math.random() * (canvas.width - 30) + 15,
+    y: -20,
+    r: 14 + Math.random() * 6,
+    rot: Math.random() * Math.PI * 2,
+    rotSpeed: (Math.random() - 0.5) * 0.08,
+  });
+}
+
+// ─────────────────────────────────────────
+// VIDAS
+// ─────────────────────────────────────────
+function updateLivesDisplay() {
+  document.getElementById("lives-display").innerText =
+    "❤️".repeat(lives) + "🖤".repeat(Math.max(0, 3 - lives));
+}
+
+function loseLife() {
+  if (invincible) return;
+  lives--;
+  updateLivesDisplay();
+  invincible = true;
+  invincibleTimer = 120; // ~2s de invencibilidade
+  if (lives <= 0) {
+    running = false;
+    clearInterval(enemyTimer);
+    clearInterval(bulletTimer);
+    clearInterval(diffTimer);
+    showGameOver();
+  }
+}
+
+// ─────────────────────────────────────────
+// GAME OVER (tela bonita, sem alert)
+// ─────────────────────────────────────────
+function showGameOver() {
+  const best = parseInt(localStorage.getItem("spacebarber_best") || "0");
+  const isNew = score > best;
+  if (isNew) localStorage.setItem("spacebarber_best", score);
+
+  document.getElementById("final-score").innerText = score;
+  document.getElementById("record-msg").innerText  =
+    isNew && score > 0 ? "🏆 NOVO RECORDE!" : "";
+  document.getElementById("best-score-display").innerText =
+    best > 0 && !isNew ? `Recorde: ${best} pts` : "";
+  document.getElementById("game-over-screen").style.display = "flex";
+}
+
+// ─────────────────────────────────────────
+// PARTÍCULAS de explosão
+// ─────────────────────────────────────────
+function spawnParticles(x, y) {
+  for (let i = 0; i < 8; i++) {
+    const angle = (Math.PI * 2 / 8) * i + Math.random() * 0.4;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * (2 + Math.random() * 3),
+      vy: Math.sin(angle) * (2 + Math.random() * 3),
+      life: 1,
+      r: 3 + Math.random() * 3,
+    });
+  }
+}
+
+// ─────────────────────────────────────────
+// DESENHOS
+// ─────────────────────────────────────────
+function drawStars() {
+  STARS.forEach(s => {
+    s.y += s.speed;
+    if (s.y > 500) { s.y = 0; s.x = Math.random() * 400; }
+    ctx.globalAlpha = s.alpha;
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
 
 function drawPlayer() {
+  // Piscada durante invencibilidade
+  if (invincible && Math.floor(invincibleTimer / 8) % 2 === 0) return;
 
-    ctx.fillStyle = "#00d4ff";
+  // Motor (chama)
+  const grad = ctx.createLinearGradient(player.x + 20, player.y + 40, player.x + 20, player.y + 60);
+  grad.addColorStop(0, "rgba(201,168,76,0.9)");
+  grad.addColorStop(1, "rgba(201,168,76,0)");
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.moveTo(player.x + 10, player.y + 40);
+  ctx.lineTo(player.x + 20, player.y + 55 + Math.random() * 6);
+  ctx.lineTo(player.x + 30, player.y + 40);
+  ctx.closePath();
+  ctx.fill();
 
-    // Corpo da nave
+  // Nave
+  ctx.fillStyle = "#00d4ff";
+  ctx.beginPath();
+  ctx.moveTo(player.x + 20, player.y);
+  ctx.lineTo(player.x,      player.y + 40);
+  ctx.lineTo(player.x + 40, player.y + 40);
+  ctx.closePath();
+  ctx.fill();
+
+  // Cockpit
+  ctx.fillStyle = "rgba(0,212,255,0.3)";
+  ctx.beginPath();
+  ctx.arc(player.x + 20, player.y + 22, 8, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Asas
+  ctx.fillStyle = "#0090bb";
+  ctx.fillRect(player.x - 10, player.y + 22, 14, 8);
+  ctx.fillRect(player.x + 36, player.y + 22, 14, 8);
+}
+
+function drawEnemy(e) {
+  ctx.save();
+  ctx.translate(e.x, e.y);
+  e.rot += e.rotSpeed;
+  ctx.rotate(e.rot);
+
+  // Corpo do inimigo — estilo "meteoro/disco"
+  const grad = ctx.createRadialGradient(0, 0, 2, 0, 0, e.r);
+  grad.addColorStop(0, "#ff6666");
+  grad.addColorStop(1, "#aa0000");
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(0, 0, e.r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Detalhe central
+  ctx.fillStyle = "rgba(255,200,200,0.4)";
+  ctx.beginPath();
+  ctx.arc(-e.r * 0.3, -e.r * 0.3, e.r * 0.35, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawBullet(b) {
+  const grad = ctx.createLinearGradient(b.x, b.y - 12, b.x, b.y);
+  grad.addColorStop(0, "#C9A84C");
+  grad.addColorStop(1, "rgba(201,168,76,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(b.x - 2, b.y - 12, 4, 12);
+}
+
+function drawParticles() {
+  particles.forEach((p, i) => {
+    p.x += p.vx; p.y += p.vy;
+    p.life -= 0.05;
+    if (p.life <= 0) { particles.splice(i, 1); return; }
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = "#C9A84C";
     ctx.beginPath();
-    ctx.moveTo(player.x + 20, player.y);
-    ctx.lineTo(player.x, player.y + 40);
-    ctx.lineTo(player.x + 40, player.y + 40);
-    ctx.closePath();
+    ctx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
     ctx.fill();
-
-    // Asas
-    ctx.fillRect(player.x - 10, player.y + 20, 60, 8);
+  });
+  ctx.globalAlpha = 1;
 }
 
-function createEnemy() {
+// ─────────────────────────────────────────
+// LOOP PRINCIPAL
+// ─────────────────────────────────────────
+function gameLoop() {
+  // Fundo
+  ctx.fillStyle = "#0A0A0A";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    enemies.push({
-        x: Math.random() * (canvas.width - 30),
-        y: -30,
-        width: 30,
-        height: 30
-    });
+  drawStars();
 
+  if (!running) {
+    drawPlayer();
+    animId = requestAnimationFrame(gameLoop);
+    return;
+  }
+
+  // Invencibilidade
+  if (invincible) {
+    invincibleTimer--;
+    if (invincibleTimer <= 0) invincible = false;
+  }
+
+  drawPlayer();
+  drawParticles();
+
+  // ── TIROS ──
+  for (let bi = bullets.length - 1; bi >= 0; bi--) {
+    const b = bullets[bi];
+    b.y -= 9;
+    drawBullet(b);
+    if (b.y < -12) { bullets.splice(bi, 1); continue; }
+
+    // Colisão tiro × inimigo
+    for (let ei = enemies.length - 1; ei >= 0; ei--) {
+      const e = enemies[ei];
+      const dx = b.x - e.x, dy = b.y - e.y;
+      if (Math.sqrt(dx * dx + dy * dy) < e.r + 2) {
+        spawnParticles(e.x, e.y);
+        enemies.splice(ei, 1);
+        bullets.splice(bi, 1);
+        score += 10;
+        document.getElementById("score").innerText = "Pontos: " + score;
+        break;
+      }
+    }
+  }
+
+  // ── INIMIGOS ──
+  for (let ei = enemies.length - 1; ei >= 0; ei--) {
+    const e = enemies[ei];
+    e.y += enemySpeed;
+    drawEnemy(e);
+
+    // Colisão inimigo × nave
+    const dx = e.x - (player.x + 20), dy = e.y - (player.y + 20);
+    if (Math.sqrt(dx * dx + dy * dy) < e.r + 18) {
+      spawnParticles(e.x, e.y);
+      enemies.splice(ei, 1);
+      loseLife();
+      continue;
+    }
+
+    if (e.y > canvas.height + 30) enemies.splice(ei, 1);
+  }
+
+  animId = requestAnimationFrame(gameLoop);
 }
 
-setInterval(createEnemy, 1000);
-
-setInterval(() => {
-
-    bullets.push({
-        x: player.x + 18,
-        y: player.y
-    });
-
-}, 300);
-
+// ─────────────────────────────────────────
+// CONTROLES
+// ─────────────────────────────────────────
 document.addEventListener("mousemove", e => {
-
-    const rect = canvas.getBoundingClientRect();
-
-    player.x =
-        e.clientX -
-        rect.left -
-        20;
-
+  const rect = canvas.getBoundingClientRect();
+  const scale = canvas.width / rect.width;
+  player.x = (e.clientX - rect.left) * scale - 20;
+  player.x = Math.max(0, Math.min(canvas.width - 40, player.x));
 });
 
 canvas.addEventListener("touchmove", e => {
+  e.preventDefault();
+  const rect = canvas.getBoundingClientRect();
+  const scale = canvas.width / rect.width;
+  player.x = (e.touches[0].clientX - rect.left) * scale - 20;
+  player.x = Math.max(0, Math.min(canvas.width - 40, player.x));
+}, { passive: false });
 
-    const rect = canvas.getBoundingClientRect();
-
-    player.x =
-        e.touches[0].clientX -
-        rect.left -
-        20;
-
-});
-
-function resetGame() {
-
-    score = 0;
-
-    bullets.length = 0;
-    enemies.length = 0;
-
-    document.getElementById("score").innerText =
-        "Pontos: 0";
-
-}
-
-function gameOver() {
-
-    alert(
-        "💥 GAME OVER!\n\nPontuação: " +
-        score
-    );
-
-    resetGame();
-
-}
-
-function gameLoop() {
-
-    ctx.clearRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-    drawPlayer();
-
-    // TIROS
-    ctx.fillStyle = "yellow";
-
-    bullets.forEach((bullet, bi) => {
-
-        bullet.y -= 8;
-
-        ctx.fillRect(
-            bullet.x,
-            bullet.y,
-            4,
-            10
-        );
-
-        if (bullet.y < 0) {
-            bullets.splice(bi, 1);
-        }
-
-    });
-
-    // INIMIGOS
-    enemies.forEach((enemy, ei) => {
-
-        enemy.y += 2;
-
-        ctx.fillStyle = "#ff3333";
-
-        ctx.beginPath();
-
-        ctx.arc(
-            enemy.x,
-            enemy.y,
-            15,
-            0,
-            Math.PI * 2
-        );
-
-        ctx.fill();
-
-        // COLISÃO COM NAVE
-
-        if (
-            enemy.x < player.x + 40 &&
-            enemy.x + enemy.width > player.x &&
-            enemy.y < player.y + 40 &&
-            enemy.y + enemy.height > player.y
-        ) {
-
-            gameOver();
-            return;
-
-        }
-
-        // COLISÃO COM TIRO
-
-        bullets.forEach((bullet, bi) => {
-
-            if (
-                bullet.x < enemy.x + enemy.width &&
-                bullet.x + 4 > enemy.x &&
-                bullet.y < enemy.y + enemy.height &&
-                bullet.y + 10 > enemy.y
-            ) {
-
-                enemies.splice(ei, 1);
-                bullets.splice(bi, 1);
-
-                score += 10;
-
-                document.getElementById("score").innerText =
-                    "Pontos: " + score;
-
-            }
-
-        });
-
-        if (
-            enemy.y >
-            canvas.height + 30
-        ) {
-            enemies.splice(ei, 1);
-        }
-
-    });
-
-    requestAnimationFrame(
-        gameLoop
-    );
-
-}
-
+// Inicia o loop de fundo (estrelas) sem iniciar o jogo
+running = false;
+lives = 3;
+score = 0;
 gameLoop();
+
+})();
 
 
 

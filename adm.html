@@ -1383,6 +1383,25 @@ tr:hover td{background:rgba(255,255,255,.02);}
 const API_URL = 'https://ohbarbeirobeckend-1.onrender.com'; // ← TROQUE AQUI
 
 // ═══════════════════════════════════════════════════════════
+// KEEP-ALIVE — evita que o Render (plano gratuito) hiberne
+// Faz um ping leve no backend a cada 8 minutos.
+// No painel admin o intervalo é menor (4 min) pois o admin
+// costuma deixar a aba aberta por longos períodos.
+// ═══════════════════════════════════════════════════════════
+(function keepAlive() {
+  const INTERVAL = 4 * 60 * 1000; // 4 minutos (admin deixa aba aberta)
+
+  function ping() {
+    fetch(API_URL + '/api/ping', { method: 'GET', cache: 'no-store' })
+      .catch(() => {}); // silencioso — falha não afeta o painel
+  }
+
+  // Primeiro ping imediato (admin acabou de abrir o painel)
+  ping();
+  setInterval(ping, INTERVAL);
+})();
+
+// ═══════════════════════════════════════════════════════════
 // CAMADA DE API — todas as operações vão direto ao servidor
 // ═══════════════════════════════════════════════════════════
 const _cache = {};
