@@ -767,21 +767,38 @@ tr:hover td{background:rgba(255,255,255,.02);}
       ══════════════════════════════ -->
       <div class="panel" id="panel-financeiro">
         <div class="ph">
-          <div class="ph-left"><h1>Financeiro</h1><p>Receitas e despesas</p></div>
+          <div class="ph-left"><h1>Financeiro</h1><p>Receitas, despesas e fluxo de caixa</p></div>
           <div class="ph-actions">
+            <button class="btn btn-ghost btn-sm" onclick="exportFinCSV('completo')" title="Exportar resumo do mês">⬇ Exportar Mês</button>
             <button class="btn btn-success btn-sm" onclick="openRec()">+ Receita</button>
             <button class="btn btn-danger btn-sm" onclick="openDesp()">+ Despesa</button>
           </div>
         </div>
  
         <!-- KPIs financeiros -->
+        <!-- Card caixa do dia -->
+        <div class="fin-day-card" id="fin-day-card" style="margin-bottom:18px;background:var(--s1);border:1px solid var(--bd);border-radius:var(--r);padding:16px 20px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--gold),var(--gold-d));display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;">📆</div>
+            <div><div style="font-size:.65rem;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;font-weight:600;">Caixa de Hoje</div><div style="font-family:var(--fd);font-size:.78rem;color:var(--text2)" id="fin-day-date">—</div></div>
+          </div>
+          <div style="display:flex;gap:28px;flex-wrap:wrap;">
+            <div><div style="font-size:.65rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Entradas</div><div style="font-family:var(--fd);font-size:1.2rem;font-weight:700;color:var(--ok)" id="fin-day-rec">R$ 0</div></div>
+            <div><div style="font-size:.65rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Saídas</div><div style="font-family:var(--fd);font-size:1.2rem;font-weight:700;color:var(--err)" id="fin-day-desp">R$ 0</div></div>
+            <div><div style="font-size:.65rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Saldo do Dia</div><div style="font-family:var(--fd);font-size:1.2rem;font-weight:700;" id="fin-day-luc">R$ 0</div></div>
+            <div><div style="font-size:.65rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:2px;">Transações</div><div style="font-family:var(--fd);font-size:1.2rem;font-weight:700;color:var(--info)" id="fin-day-count">0</div></div>
+          </div>
+        </div>
+
         <div class="kpi-grid" style="margin-bottom:20px;">
-          <div class="kpi-card gold"><div class="kpi-label">Receita Total (Mês)</div><div class="kpi-val" id="f-rec-total">R$ 0</div></div>
-          <div class="kpi-card"><div class="kpi-label">Despesas Totais (Mês)</div><div class="kpi-val" id="f-desp-total" style="color:var(--err)">R$ 0</div></div>
-          <div class="kpi-card"><div class="kpi-label">Lucro Líquido (Mês)</div><div class="kpi-val" id="f-luc-total">R$ 0</div></div>
-          <div class="kpi-card"><div class="kpi-label">Ticket Médio</div><div class="kpi-val" id="f-ticket">R$ 0</div></div>
-          <div class="kpi-card"><div class="kpi-label">Receita Média Diária</div><div class="kpi-val" id="f-med-dia">R$ 0</div></div>
-          <div class="kpi-card"><div class="kpi-label">Lucro Médio Diário</div><div class="kpi-val" id="f-luc-dia-med">R$ 0</div></div>
+          <div class="kpi-card gold"><span class="kpi-icon">📈</span><div class="kpi-label">Receita Total (Mês)</div><div class="kpi-val" id="f-rec-total">R$ 0</div><div class="kpi-sub"><span class="kpi-trend up" id="f-rec-trend">—</span> vs mês ant.</div></div>
+          <div class="kpi-card"><span class="kpi-icon">📉</span><div class="kpi-label">Despesas Totais (Mês)</div><div class="kpi-val" id="f-desp-total" style="color:var(--err)">R$ 0</div><div class="kpi-sub" id="f-desp-maior" style="font-size:.68rem;color:var(--text3)">—</div></div>
+          <div class="kpi-card"><span class="kpi-icon">💎</span><div class="kpi-label">Lucro Líquido (Mês)</div><div class="kpi-val" id="f-luc-total">R$ 0</div><div class="kpi-sub"><span class="kpi-trend" id="f-luc-trend">—</span></div></div>
+          <div class="kpi-card"><span class="kpi-icon">📊</span><div class="kpi-label">Margem de Lucro</div><div class="kpi-val" id="f-margem">0%</div><div class="kpi-progress"><div class="kpi-progress-bar" id="f-margem-bar" style="width:0%"></div></div></div>
+          <div class="kpi-card"><span class="kpi-icon">🎫</span><div class="kpi-label">Ticket Médio</div><div class="kpi-val" id="f-ticket">R$ 0</div><div class="kpi-sub">Por atendimento</div></div>
+          <div class="kpi-card"><span class="kpi-icon">📅</span><div class="kpi-label">Receita Média Diária</div><div class="kpi-val" id="f-med-dia">R$ 0</div><div class="kpi-sub" id="f-dias-uteis">—</div></div>
+          <div class="kpi-card"><span class="kpi-icon">✅</span><div class="kpi-label">Lucro Médio Diário</div><div class="kpi-val" id="f-luc-dia-med">R$ 0</div><div class="kpi-sub">Acumulado ÷ dias</div></div>
+          <div class="kpi-card"><span class="kpi-icon">🏆</span><div class="kpi-label">Maior Receita do Mês</div><div class="kpi-val" id="f-maior-rec">R$ 0</div><div class="kpi-sub" id="f-maior-rec-desc" style="font-size:.68rem;">—</div></div>
         </div>
  
         <div class="chart-grid chart-grid-2" style="margin-bottom:16px;">
@@ -800,15 +817,62 @@ tr:hover td{background:rgba(255,255,255,.02);}
             <div class="chart-wrap tall"><canvas id="ch-desp2"></canvas></div>
           </div>
         </div>
+        <div class="chart-card" style="margin-bottom:16px;">
+          <div class="chart-head"><div><div class="chart-title">Fluxo de Caixa Acumulado</div><div class="chart-sub">Saldo acumulado dia a dia no mês</div></div></div>
+          <div class="chart-wrap" style="height:180px;"><canvas id="ch-fluxo"></canvas></div>
+        </div>
  
         <div class="chart-grid chart-grid-2">
           <div class="tw">
-            <div class="tw-head"><div class="tw-title">Receitas</div><input type="month" id="f-rec-mes" onchange="renderRec()" style="background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r2);padding:6px 10px;color:var(--text);font-size:.78rem;"></div>
-            <div class="ox"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Valor</th><th></th></tr></thead><tbody id="tb-rec"></tbody></table></div>
+            <div class="tw-head" style="flex-direction:column;align-items:stretch;gap:10px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                <div class="tw-title">Receitas</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                  <input type="month" id="f-rec-mes" onchange="renderRec()" style="background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r2);padding:6px 10px;color:var(--text);font-size:.78rem;">
+                  <button class="btn btn-ghost btn-xs" onclick="exportFinCSV('receitas')" title="Exportar CSV">⬇ CSV</button>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <input type="text" id="f-rec-search" placeholder="🔍 Buscar..." oninput="renderRec()" style="flex:1;min-width:120px;background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r2);padding:7px 10px;color:var(--text);font-size:.78rem;">
+                <select id="f-rec-cat" onchange="renderRec()" style="background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r2);padding:7px 10px;color:var(--text);font-size:.78rem;">
+                  <option value="">Todas categorias</option>
+                  <option value="servico">Serviço</option>
+                  <option value="produto">Produto</option>
+                  <option value="assinatura">Assinatura</option>
+                  <option value="avulso">Avulso</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </div>
+            </div>
+            <div class="ox"><table><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th>Pgto</th><th>Valor</th><th></th></tr></thead><tbody id="tb-rec"></tbody></table></div>
+            <div style="padding:10px 16px;border-top:1px solid var(--bd);display:flex;justify-content:space-between;font-size:.76rem;color:var(--text3);">
+              <span id="rec-count">0 registros</span>
+              <span style="color:var(--ok);font-weight:600;" id="rec-subtotal">Total: R$ 0</span>
+            </div>
           </div>
           <div class="tw">
-            <div class="tw-head"><div class="tw-title">Despesas</div><input type="month" id="f-desp-mes" onchange="renderDesp()" style="background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r2);padding:6px 10px;color:var(--text);font-size:.78rem;"></div>
+            <div class="tw-head" style="flex-direction:column;align-items:stretch;gap:10px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                <div class="tw-title">Despesas</div>
+                <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                  <input type="month" id="f-desp-mes" onchange="renderDesp()" style="background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r2);padding:6px 10px;color:var(--text);font-size:.78rem;">
+                  <button class="btn btn-ghost btn-xs" onclick="exportFinCSV('despesas')" title="Exportar CSV">⬇ CSV</button>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <input type="text" id="f-desp-search" placeholder="🔍 Buscar..." oninput="renderDesp()" style="flex:1;min-width:120px;background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r2);padding:7px 10px;color:var(--text);font-size:.78rem;">
+                <select id="f-desp-tipo-f" onchange="renderDesp()" style="background:var(--s2);border:1px solid var(--bd2);border-radius:var(--r2);padding:7px 10px;color:var(--text);font-size:.78rem;">
+                  <option value="">Todos tipos</option>
+                  <option value="fixa">Fixas</option>
+                  <option value="variavel">Variáveis</option>
+                </select>
+              </div>
+            </div>
             <div class="ox"><table><thead><tr><th>Data</th><th>Nome</th><th>Categoria</th><th>Tipo</th><th>Valor</th><th></th></tr></thead><tbody id="tb-desp"></tbody></table></div>
+            <div style="padding:10px 16px;border-top:1px solid var(--bd);display:flex;justify-content:space-between;font-size:.76rem;color:var(--text3);">
+              <span id="desp-count">0 registros</span>
+              <span style="color:var(--err);font-weight:600;" id="desp-subtotal">Total: R$ 0</span>
+            </div>
           </div>
         </div>
       </div>
@@ -1188,6 +1252,7 @@ tr:hover td{background:rgba(255,255,255,.02);}
         <div class="fg"><label>Categoria</label><select id="rec-cat"><option value="servico">Serviço</option><option value="produto">Produto</option><option value="assinatura">Assinatura</option><option value="avulso">Avulso</option><option value="outro">Outro</option></select></div>
         <div class="fg"><label>Valor (R$)</label><input type="number" id="rec-val" step="0.01"></div>
         <div class="fg"><label>Data</label><input type="date" id="rec-data"></div>
+        <div class="fg"><label>Forma de Pagamento</label><select id="rec-pgto"><option value="Dinheiro">💵 Dinheiro</option><option value="Pix">🔑 Pix</option><option value="Cartão Débito">💳 Cartão Débito</option><option value="Cartão Crédito">💳 Cartão Crédito</option><option value="Transferência">🏦 Transferência</option><option value="Outro">📝 Outro</option></select></div>
         <div class="fg"><label>Cliente (opcional)</label><select id="rec-cli"></select></div>
         <div class="fg"><label>Observações</label><textarea id="rec-obs"></textarea></div>
       </div>
@@ -2229,40 +2294,115 @@ async function delAg(id){
 function loadFinanceiro(){
   const mes=el('f-rec-mes');if(mes&&!mes.value)mes.value=todayMes();
   const des=el('f-desp-mes');if(des&&!des.value)des.value=todayMes();
-  renderRec();renderDesp();updateFinKPIs();buildFinChart('mes');buildDespChart2();
+  renderRec();renderDesp();updateFinKPIs();buildFinChart('mes');buildDespChart2();buildFluxoChart();
 }
 function updateFinKPIs(){
   const mes=todayMes();
-  const recs=DB.get('receitas',[]).filter(r=>r.data?.startsWith(mes));
-  const desps=DB.get('despesas',[]).filter(d=>d.data?.startsWith(mes));
+  const todayStr=today();
+  const allRecs=DB.get('receitas',[]);
+  const allDesps=DB.get('despesas',[]);
+  const recs=allRecs.filter(r=>r.data?.startsWith(mes));
+  const desps=allDesps.filter(d=>d.data?.startsWith(mes));
   const recTotal=recs.reduce((s,r)=>s+parseFloat(r.valor||0),0);
   const despTotal=desps.reduce((s,d)=>s+parseFloat(d.valor||0),0);
   const luc=recTotal-despTotal;
+  const margem=recTotal>0?((luc/recTotal)*100):0;
   const ags=DB.get('agendamentos',[]).filter(a=>a.data?.startsWith(mes)&&a.status==='finalizado');
   const ticket=ags.length>0?recTotal/ags.length:0;
   const dp=daysPassed();
+
+  // Mês anterior
+  const now=new Date();
+  const mesAntY=now.getMonth()===0?now.getFullYear()-1:now.getFullYear();
+  const mesAntM=now.getMonth()===0?12:now.getMonth();
+  const mesAnt=`${mesAntY}-${String(mesAntM).padStart(2,'0')}`;
+  const recAnt=allRecs.filter(r=>r.data?.startsWith(mesAnt)).reduce((s,r)=>s+parseFloat(r.valor||0),0);
+  const lucAnt=recAnt - allDesps.filter(d=>d.data?.startsWith(mesAnt)).reduce((s,d)=>s+parseFloat(d.valor||0),0);
+
+  // Caixa do dia
+  const recDia=allRecs.filter(r=>r.data===todayStr);
+  const despDia=allDesps.filter(d=>d.data===todayStr);
+  const recDiaTotal=recDia.reduce((s,r)=>s+parseFloat(r.valor||0),0);
+  const despDiaTotal=despDia.reduce((s,d)=>s+parseFloat(d.valor||0),0);
+  const saldoDia=recDiaTotal-despDiaTotal;
+  const dateOpts={weekday:'long',day:'numeric',month:'long'};
+  if(el('fin-day-date'))el('fin-day-date').textContent=new Date().toLocaleDateString('pt-BR',dateOpts);
+  if(el('fin-day-rec'))el('fin-day-rec').textContent=brl(recDiaTotal);
+  if(el('fin-day-desp'))el('fin-day-desp').textContent=brl(despDiaTotal);
+  if(el('fin-day-luc')){el('fin-day-luc').textContent=brl(saldoDia);el('fin-day-luc').style.color=saldoDia>=0?'var(--ok)':'var(--err)';}
+  if(el('fin-day-count'))el('fin-day-count').textContent=recDia.length+despDia.length;
+
+  // Maior despesa
+  const maiorDesp=desps.length?desps.reduce((a,b)=>parseFloat(b.valor||0)>parseFloat(a.valor||0)?b:a):null;
+  if(el('f-desp-maior'))el('f-desp-maior').textContent=maiorDesp?`Maior: ${maiorDesp.nome||'—'} (${brl(maiorDesp.valor)})`:'—';
+
+  // Maior receita
+  const maiorRec=recs.length?recs.reduce((a,b)=>parseFloat(b.valor||0)>parseFloat(a.valor||0)?b:a):null;
+  if(el('f-maior-rec'))el('f-maior-rec').textContent=brl(maiorRec?.valor||0);
+  if(el('f-maior-rec-desc'))el('f-maior-rec-desc').textContent=maiorRec?(maiorRec.descricao||'').slice(0,40)||'—':'—';
+
+  // Trends
+  const recTrend=el('f-rec-trend');
+  if(recTrend){const diff=recAnt>0?((recTotal-recAnt)/recAnt*100):0;recTrend.textContent=(diff>=0?'▲ ':'▼ ')+Math.abs(diff).toFixed(0)+'%';recTrend.className='kpi-trend '+(diff>=0?'up':'down');}
+  const lucTrend=el('f-luc-trend');
+  if(lucTrend){const diff2=lucAnt!==0?((luc-lucAnt)/Math.abs(lucAnt)*100):0;lucTrend.textContent=(diff2>=0?'▲ ':'▼ ')+Math.abs(diff2).toFixed(0)+'% vs mês ant.';lucTrend.className='kpi-trend '+(diff2>=0?'up':'down');}
+
+  // Margem
+  if(el('f-margem'))el('f-margem').textContent=margem.toFixed(1)+'%';
+  if(el('f-margem-bar'))el('f-margem-bar').style.width=Math.max(0,Math.min(100,margem)).toFixed(0)+'%';
+
   el('f-rec-total').textContent=brl(recTotal);
   el('f-desp-total').textContent=brl(despTotal);
   el('f-luc-total').textContent=brl(luc);
   el('f-luc-total').style.color=luc>=0?'var(--ok)':'var(--err)';
   el('f-ticket').textContent=brl(ticket);
   el('f-med-dia').textContent=brl(dp>0?recTotal/dp:0);
+  if(el('f-dias-uteis'))el('f-dias-uteis').textContent=`${dp} dias passados`;
   el('f-luc-dia-med').textContent=brl(dp>0?luc/dp:0);
 }
 function renderRec(){
   const mes=(el('f-rec-mes')?.value)||todayMes();
-  const recs=DB.get('receitas',[]).filter(r=>r.data?.startsWith(mes)).sort((a,b)=>b.data.localeCompare(a.data));
+  const search=(el('f-rec-search')?.value||'').toLowerCase();
+  const catF=el('f-rec-cat')?.value||'';
+  let recs=DB.get('receitas',[]).filter(r=>r.data?.startsWith(mes)).sort((a,b)=>b.data.localeCompare(a.data));
+  if(search)recs=recs.filter(r=>(r.descricao||'').toLowerCase().includes(search)||(r.obs||'').toLowerCase().includes(search));
+  if(catF)recs=recs.filter(r=>r.categoria===catF);
+  const subtotal=recs.reduce((s,r)=>s+parseFloat(r.valor||0),0);
+  if(el('rec-count'))el('rec-count').textContent=`${recs.length} registro${recs.length!==1?'s':''}`;
+  if(el('rec-subtotal'))el('rec-subtotal').textContent=`Total: ${brl(subtotal)}`;
   const catLabels={servico:'Serviço',produto:'Produto',avulso:'Avulso',assinatura:'Assinatura',outro:'Outro'};
-  el('tb-rec').innerHTML=recs.length?recs.map(r=>`<tr><td>${fDate(r.data)}</td><td>${r.descricao||'—'}</td><td><span class="badge b-conf">${catLabels[r.categoria]||r.categoria}</span></td><td style="color:var(--ok);font-weight:600">${brl(r.valor)}</td><td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu(this,'rec${r.id}')">⋮</button><div class="dot-menu-drop" id="dm-rec${r.id}"><button class="dot-menu-item danger" onclick="delRec('${r.id}');dotMenu(null,'rec${r.id}')">🗑 Excluir</button></div></div></td></tr>`).join(''):'<tr><td colspan="5" style="text-align:center;padding:24px;color:var(--text3)">Nenhuma receita.</td></tr>';
+  const pgtoIcon={Dinheiro:'💵',Pix:'🔑','Cartão Débito':'💳','Cartão Crédito':'💳',Transferência:'🏦',Outro:'📝'};
+  el('tb-rec').innerHTML=recs.length?recs.map(r=>`<tr>
+    <td>${fDate(r.data)}</td>
+    <td>${r.descricao||'—'}</td>
+    <td><span class="badge b-conf">${catLabels[r.categoria]||r.categoria}</span></td>
+    <td style="font-size:.78rem;color:var(--text2)">${r.formaPagamento?(pgtoIcon[r.formaPagamento]||'')+'&nbsp;'+r.formaPagamento:'—'}</td>
+    <td style="color:var(--ok);font-weight:600">${brl(r.valor)}</td>
+    <td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu(this,'rec${r.id}')">⋮</button><div class="dot-menu-drop" id="dm-rec${r.id}"><button class="dot-menu-item danger" onclick="delRec('${r.id}');dotMenu(null,'rec${r.id}')">🗑 Excluir</button></div></div></td>
+  </tr>`).join(''):'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text3)">Nenhuma receita encontrada.</td></tr>';
 }
 function renderDesp(){
   const mes=(el('f-desp-mes')?.value)||todayMes();
-  const desps=DB.get('despesas',[]).filter(d=>d.data?.startsWith(mes)).sort((a,b)=>b.data.localeCompare(a.data));
-  el('tb-desp').innerHTML=desps.length?desps.map(d=>`<tr><td>${fDate(d.data)}</td><td>${d.nome||'—'}</td><td style="font-size:.75rem">${d.categoria||'—'}</td><td><span class="badge ${d.tipo==='fixa'?'b-prog':'b-pend'}">${d.tipo==='fixa'?'Fixa':'Variável'}</span></td><td style="color:var(--err);font-weight:600">${brl(d.valor)}</td><td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu(this,'desp${d.id}')">⋮</button><div class="dot-menu-drop" id="dm-desp${d.id}"><button class="dot-menu-item danger" onclick="delDesp('${d.id}');dotMenu(null,'desp${d.id}')">🗑 Excluir</button></div></div></td></tr>`).join(''):'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text3)">Nenhuma despesa.</td></tr>';
+  const search=(el('f-desp-search')?.value||'').toLowerCase();
+  const tipoF=el('f-desp-tipo-f')?.value||'';
+  let desps=DB.get('despesas',[]).filter(d=>d.data?.startsWith(mes)).sort((a,b)=>b.data.localeCompare(a.data));
+  if(search)desps=desps.filter(d=>(d.nome||'').toLowerCase().includes(search)||(d.obs||'').toLowerCase().includes(search));
+  if(tipoF)desps=desps.filter(d=>d.tipo===tipoF);
+  const subtotal=desps.reduce((s,d)=>s+parseFloat(d.valor||0),0);
+  if(el('desp-count'))el('desp-count').textContent=`${desps.length} registro${desps.length!==1?'s':''}`;
+  if(el('desp-subtotal'))el('desp-subtotal').textContent=`Total: ${brl(subtotal)}`;
+  el('tb-desp').innerHTML=desps.length?desps.map(d=>`<tr>
+    <td>${fDate(d.data)}</td>
+    <td>${d.nome||'—'}</td>
+    <td style="font-size:.75rem">${d.categoria||'—'}</td>
+    <td><span class="badge ${d.tipo==='fixa'?'b-prog':'b-pend'}">${d.tipo==='fixa'?'Fixa':'Variável'}</span></td>
+    <td style="color:var(--err);font-weight:600">${brl(d.valor)}</td>
+    <td><div class="dot-menu-wrap"><button class="dot-menu-btn" onclick="dotMenu(this,'desp${d.id}')">⋮</button><div class="dot-menu-drop" id="dm-desp${d.id}"><button class="dot-menu-item danger" onclick="delDesp('${d.id}');dotMenu(null,'desp${d.id}')">🗑 Excluir</button></div></div></td>
+  </tr>`).join(''):'<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--text3)">Nenhuma despesa encontrada.</td></tr>';
 }
 function openRec(){el('rec-id').value='';['rec-desc','rec-val','rec-obs'].forEach(f=>el(f).value='');el('rec-data').value=today();el('rec-cat').value='servico';const clis=DB.get('clientes',[]);el('rec-cli').innerHTML='<option value="">— Nenhum —</option>'+clis.map(c=>`<option value="${c.id}">${c.nome}</option>`).join('');openMo('mo-rec');}
 async function saveRec(){
-  const data={descricao:el('rec-desc').value,categoria:el('rec-cat').value,valor:parseFloat(el('rec-val').value)||0,data:el('rec-data').value,clienteId:el('rec-cli').value,obs:el('rec-obs').value};
+  const data={descricao:el('rec-desc').value,categoria:el('rec-cat').value,valor:parseFloat(el('rec-val').value)||0,data:el('rec-data').value,clienteId:el('rec-cli').value,formaPagamento:el('rec-pgto')?.value||'',obs:el('rec-obs').value};
   try {
     const novo = await apiPost('receitas', data);
     if(!novo) return;
@@ -2296,6 +2436,29 @@ async function delDesp(id){
     toast('Excluída.'); renderDesp(); updateFinKPIs();
   } catch(e){ toast('Erro: '+e.message,'er'); }
 }
+function exportFinCSV(tipo){
+  const mes=(el('f-rec-mes')?.value)||todayMes();
+  let rows=[];
+  if(tipo==='receitas'||tipo==='completo'){
+    const recs=DB.get('receitas',[]).filter(r=>r.data?.startsWith(mes));
+    if(tipo==='completo')rows.push(['=== RECEITAS ===']);
+    rows.push(['Data','Descrição','Categoria','Forma Pagamento','Valor']);
+    recs.forEach(r=>rows.push([r.data,r.descricao||'',r.categoria||'',r.formaPagamento||'',parseFloat(r.valor||0).toFixed(2).replace('.',',')]));
+    if(tipo==='completo'){rows.push([]);const tot=recs.reduce((s,r)=>s+parseFloat(r.valor||0),0);rows.push(['TOTAL RECEITAS','','','',tot.toFixed(2).replace('.',',')]);rows.push([]);}
+  }
+  if(tipo==='despesas'||tipo==='completo'){
+    const desps=DB.get('despesas',[]).filter(d=>d.data?.startsWith(mes));
+    if(tipo==='completo')rows.push(['=== DESPESAS ===']);
+    rows.push(['Data','Nome','Categoria','Tipo','Valor']);
+    desps.forEach(d=>rows.push([d.data,d.nome||'',d.categoria||'',d.tipo||'',parseFloat(d.valor||0).toFixed(2).replace('.',',')]));
+    if(tipo==='completo'){rows.push([]);const tot=desps.reduce((s,d)=>s+parseFloat(d.valor||0),0);rows.push(['TOTAL DESPESAS','','','',tot.toFixed(2).replace('.',',')]);}
+  }
+  const csv=rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(';')).join('\r\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`financeiro_${tipo}_${mes}.csv`;a.click();URL.revokeObjectURL(url);
+  toast('CSV exportado!','ok');
+}
 function buildFinChart(period){
   destroyChart('fin');
   const now=new Date();
@@ -2326,6 +2489,25 @@ function buildDespChart2(){
   const data=Object.values(cats);
   const ctx=el('ch-desp2')?.getContext('2d');if(!ctx)return;
   charts.desp2=new Chart(ctx,{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:['#D4AF37','#22D3A5','#60A5FA','#F59E0B','#F43F5E','#A78BFA','#34D399','#FB923C','#64748B'],borderWidth:0}]},options:{...chartDefaults(),plugins:{...chartDefaults().plugins,legend:{position:'right',labels:{...chartDefaults().plugins.legend.labels,boxWidth:10,padding:8,font:{size:10}}}},cutout:'65%'}});
+}
+function buildFluxoChart(){
+  destroyChart('fluxo');
+  const now=new Date();
+  const dim=daysInMonth(now.getFullYear(),now.getMonth()+1);
+  const mes=todayMes();
+  const recs=DB.get('receitas',[]);
+  const desps=DB.get('despesas',[]);
+  const labels=Array.from({length:dim},(_,i)=>String(i+1));
+  let acum=0;
+  const data=labels.map(d=>{
+    const dateStr=`${mes}-${String(d).padStart(2,'0')}`;
+    const r=recs.filter(x=>x.data===dateStr).reduce((s,x)=>s+parseFloat(x.valor||0),0);
+    const dep=desps.filter(x=>x.data===dateStr).reduce((s,x)=>s+parseFloat(x.valor||0),0);
+    acum+=r-dep;
+    return acum;
+  });
+  const ctx=el('ch-fluxo')?.getContext('2d');if(!ctx)return;
+  charts.fluxo=new Chart(ctx,{type:'line',data:{labels,datasets:[{label:'Saldo Acumulado',data,borderColor:'#22D3A5',backgroundColor:'rgba(34,211,165,.08)',fill:true,tension:.4,pointRadius:2,borderWidth:2}]},options:{...chartDefaults(),plugins:{...chartDefaults().plugins,legend:{display:false}},scales:{...chartDefaults().scales,y:{...chartDefaults().scales?.y,ticks:{...chartDefaults().scales?.y?.ticks,callback:v=>brl(v)}}}}});
 }
  
 // ═══════════════════════════════════════════════════════════
@@ -3227,7 +3409,7 @@ window.openSidebarMobile=openSidebarMobile; window.closeSidebarMobile=closeSideb
 window.openMo=openMo; window.closeMo=closeMo; window.openAg=openAg; window.editAg=editAg;
 window.saveAg=saveAg; window.finalizarAg=finalizarAg; window.delAg=delAg;
 window.clearAgF=clearAgF; window.renderAg=renderAg;
-window.openRec=openRec; window.saveRec=saveRec; window.delRec=delRec;
+window.openRec=openRec; window.saveRec=saveRec; window.delRec=delRec; window.exportFinCSV=exportFinCSV;
 window.openDesp=openDesp; window.saveDesp=saveDesp; window.delDesp=delDesp;
 window.openCli=openCli; window.editCli=editCli; window.saveCli=saveCli; window.delCli=delCli; window.pausarBotCliente=pausarBotCliente; window.retomarBotCliente=retomarBotCliente;
 window.openSvc=openSvc; window.editSvc=editSvc; window.saveSvc=saveSvc; window.delSvc=delSvc;
